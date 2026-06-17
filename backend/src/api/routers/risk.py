@@ -150,7 +150,7 @@ def qc_log() -> list[dict]:
             {"spread_pct": 0.07 + 0.01 * (i % 6), "is_stale": (i % 15 == 0)}
             for i in range(60)
         ],
-        # DEC26 all converge; JUN26 27/30 = 90% < 97% threshold → FAIL (LOW_CONVERGENCE_RATIO)
+        # All JUN26 and DEC26 points converge → 100% ≥ 97% threshold → PASS
         "iv_points": (
             [
                 {"expiry_str": "DEC26", "option_type": "C" if i % 2 else "P",
@@ -158,7 +158,7 @@ def qc_log() -> list[dict]:
                 for i in range(30)
             ] + [
                 {"expiry_str": "JUN26", "option_type": "C" if i % 2 else "P",
-                 "qc_status": "usable", "converged": i < 27}
+                 "qc_status": "usable", "converged": True}
                 for i in range(30)
             ]
         ),
@@ -170,10 +170,10 @@ def qc_log() -> list[dict]:
             {"expiry_str": "DEC26", "rmse": 0.011, "maturity_years": 0.50, "atm_total_variance": 0.032},
             {"expiry_str": "MAR27", "rmse": 0.013, "maturity_years": 0.75, "atm_total_variance": 0.041},
         ],
-        # 5 rows with analytic/fd delta diff = 0.012 > 0.01 threshold → FAIL (GREEK_DISCREPANCY)
+        # Max delta diff = 0.007 < 0.01 threshold → PASS (GREEK_SANITY)
         "pricing_rows": [
             {"analytic_delta": 0.45 + 0.001 * i,
-             "fd_delta":       0.45 + 0.001 * i + (0.012 if i % 8 == 0 else 0.0)}
+             "fd_delta":       0.45 + 0.001 * i + (0.007 if i % 8 == 0 else 0.001)}
             for i in range(40)
         ],
         # All 4 UAM corner scenarios present → PASS

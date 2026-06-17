@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ChevronDown, ChevronRight, Database, Cpu, Radio,
@@ -8,6 +8,9 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts";
 import { Panel, StatusPill } from "../ui";
+
+// Three.js / R3F must never run on the server; lazy import keeps it client-only.
+const VolSurface3D = lazy(() => import("./VolSurface3D"));
 
 // ---------------------------------------------------------------------------
 // API response types
@@ -52,217 +55,15 @@ type GreeksSummary = {
 // Constants
 // ---------------------------------------------------------------------------
 
+const SIDEBAR_MIN = 220;
+const SIDEBAR_MAX = 450;
+const SIDEBAR_DEFAULT = 240;
+
 const EXPIRY_OPTIONS = [
   { value: "2026-12-15", label: "2026-12-15 (30D)" },
   { value: "2027-01-19", label: "2027-01-19 (65D)" },
   { value: "2027-03-21", label: "2027-03-21 (120D)" },
 ];
-
-// ---------------------------------------------------------------------------
-// 3D Volatility Surface (canvas, no external deps)
-// ---------------------------------------------------------------------------
-
-function VolSurface3D({ surface }: { surface: VolSurface }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const draw = () => {
-      const W = canvas.offsetWidth;
-      const H = canvas.offsetHeight;
-      if (!W || !H) return;
-
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width  = W * dpr;
-      canvas.height = H * dpr;
-      const ctx = canvas.getContext("2d")!;
-      ctx.scale(dpr, dpr);
-
-      const nS   = surface.strikes.length;
-      const nM   = surface.maturities.length;
-      const vols = surface.implied_vols; // [nM][nS]
-
-      let vMin = Infinity, vMax = -Infinity;
-      for (const row of vols) for (const v of row) {
-        if (v < vMin) vMin = v;
-        if (v > vMax) vMax = v;
-      }
-      const vRange = vMax - vMin || 0.01;
-
-      // Projection: phi=30° (strikes→right, maturities→upper-left), theta=28° elevation
-      const PHI     = (30 * Math.PI) / 180;
-      const THETA   = (28 * Math.PI) / 180;
-      const cosPhi  = Math.cos(PHI),  sinPhi  = Math.sin(PHI);
-      const cosTheta = Math.cos(THETA), sinTheta = Math.sin(THETA);
-
-      const SCALE = Math.min(W, H) * 0.40;
-      const CX = W * 0.48, CY = H * 0.52;
-
-      const project = (x: number, y: number, z: number): [number, number] => {
-        const x1   = x * cosPhi  - y * sinPhi;
-        const y1   = x * sinPhi  + y * cosPhi;
-        const scrX = x1;
-        const scrY = y1 * cosTheta + z * sinTheta;
-        return [CX + scrX * SCALE, CY - scrY * SCALE];
-      };
-
-      // Depth for painter's algorithm (ascending = far first)
-      const getDepth = (x: number, y: number, z: number): number => {
-        const y1 = x * sinPhi + y * cosPhi;
-        return -y1 * sinTheta + z * cosTheta;
-      };
-
-      // 3D grid point → world coords: X=strike, Y=maturity depth, Z=IV height
-      const pt3d = (si: number, mi: number): [number, number, number] => [
-        (si / (nS - 1)) - 0.5,
-        (mi / (nM - 1)) - 0.5,
-        ((vols[mi][si] - vMin) / vRange) * 0.40 - 0.05,
-      ];
-
-      // Viridis-inspired dark palette
-      const faceColor = (v: number, alpha = 0.88): string => {
-        const t = Math.max(0, Math.min(1, (v - vMin) / vRange));
-        let r, g, b;
-        if (t < 0.33) {
-          const s = t / 0.33;
-          r = Math.round(20  + s * 15);
-          g = Math.round(30  + s * 90);
-          b = Math.round(120 + s * 80);
-        } else if (t < 0.66) {
-          const s = (t - 0.33) / 0.33;
-          r = Math.round(35  + s * 30);
-          g = Math.round(120 + s * 60);
-          b = Math.round(200 - s * 90);
-        } else {
-          const s = (t - 0.66) / 0.34;
-          r = Math.round(65  + s * 188);
-          g = Math.round(180 + s * 51);
-          b = Math.round(110 - s * 90);
-        }
-        return `rgba(${r},${g},${b},${alpha})`;
-      };
-
-      // Build faces and sort farthest-first (painter's algorithm)
-      const faces: { si: number; mi: number; depth: number }[] = [];
-      for (let mi = 0; mi < nM - 1; mi++) {
-        for (let si = 0; si < nS - 1; si++) {
-          const cx   = (si + 0.5) / (nS - 1) - 0.5;
-          const cy   = (mi + 0.5) / (nM - 1) - 0.5;
-          const avgV = (vols[mi][si] + vols[mi][si+1] + vols[mi+1][si] + vols[mi+1][si+1]) / 4;
-          const cz   = (avgV - vMin) / vRange * 0.40 - 0.05;
-          faces.push({ si, mi, depth: getDepth(cx, cy, cz) });
-        }
-      }
-      faces.sort((a, b) => a.depth - b.depth); // ascending = far first
-
-      // Background
-      ctx.fillStyle = "#09090b";
-      ctx.fillRect(0, 0, W, H);
-
-      // Floor grid
-      const floorZ = -0.05;
-      ctx.lineWidth = 0.5;
-      ctx.strokeStyle = "rgba(63,63,70,0.55)";
-      for (let mi2 = 0; mi2 < nM; mi2++) {
-        const y3 = (mi2 / (nM - 1)) - 0.5;
-        const [x0, y0] = project(-0.5, y3, floorZ);
-        const [x1, y1] = project( 0.5, y3, floorZ);
-        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
-      }
-      for (let si2 = 0; si2 < nS; si2++) {
-        const x3 = (si2 / (nS - 1)) - 0.5;
-        const [x0, y0] = project(x3, -0.5, floorZ);
-        const [x1, y1] = project(x3,  0.5, floorZ);
-        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
-      }
-
-      // Surface faces
-      for (const { si, mi } of faces) {
-        const avgV   = (vols[mi][si] + vols[mi][si+1] + vols[mi+1][si] + vols[mi+1][si+1]) / 4;
-        const corners = [
-          pt3d(si,   mi  ),
-          pt3d(si+1, mi  ),
-          pt3d(si+1, mi+1),
-          pt3d(si,   mi+1),
-        ].map(([x, y, z]) => project(x, y, z));
-
-        ctx.beginPath();
-        ctx.moveTo(corners[0][0], corners[0][1]);
-        for (let i = 1; i < corners.length; i++) ctx.lineTo(corners[i][0], corners[i][1]);
-        ctx.closePath();
-        ctx.fillStyle   = faceColor(avgV);
-        ctx.fill();
-        ctx.strokeStyle = "rgba(0,0,0,0.38)";
-        ctx.lineWidth   = 0.4;
-        ctx.stroke();
-      }
-
-      // Axis lines
-      const axLine = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number) => {
-        const [sx0, sy0] = project(x0, y0, z0);
-        const [sx1, sy1] = project(x1, y1, z1);
-        ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(sx1, sy1); ctx.stroke();
-      };
-      ctx.strokeStyle = "#52525b";
-      ctx.lineWidth   = 1;
-      axLine(-0.5, -0.5, floorZ,  0.5, -0.5, floorZ); // X: strikes
-      axLine(-0.5, -0.5, floorZ, -0.5,  0.5, floorZ); // Y: maturities
-      axLine(-0.5, -0.5, floorZ, -0.5, -0.5,  0.38);  // Z: vol
-
-      const fSize = Math.max(7, Math.round(W / 75));
-      ctx.font      = `${fSize}px monospace`;
-      ctx.fillStyle = "#71717a";
-
-      // Strike labels (front edge: y = -0.5)
-      ctx.textAlign = "center";
-      surface.strikes.forEach((k, si) => {
-        const x3 = (si / (nS - 1)) - 0.5;
-        const [px, py] = project(x3, -0.5 - 0.06, floorZ);
-        ctx.fillText(k.toString(), px, py + 3);
-      });
-
-      // Maturity labels (left edge: x = -0.5)
-      ctx.textAlign = "right";
-      surface.maturities.forEach((m, mi) => {
-        const y3 = (mi / (nM - 1)) - 0.5;
-        const [px, py] = project(-0.5 - 0.03, y3, floorZ);
-        ctx.fillText(m, px - 2, py + 3);
-      });
-
-      // IV% Z-axis ticks
-      ctx.textAlign = "right";
-      [0, 0.5, 1.0].forEach(t => {
-        const vol = vMin + t * vRange;
-        const z3  = t * 0.40 - 0.05;
-        const [px, py] = project(-0.5 - 0.04, -0.5, z3);
-        ctx.fillText(`${(vol * 100).toFixed(0)}%`, px - 2, py + 3);
-      });
-
-      // Axis titles
-      ctx.fillStyle = "#a1a1aa";
-      ctx.font      = `bold ${Math.max(8, Math.round(W / 65))}px monospace`;
-      ctx.textAlign = "center";
-      const [stx, sty] = project(0, -0.5 - 0.16, floorZ);
-      ctx.fillText("STRIKE", stx, sty);
-
-      const [mtx, mty] = project(-0.5 - 0.18, 0, floorZ);
-      ctx.fillText("MATURITY", mtx, mty);
-
-      ctx.textAlign = "right";
-      const [vx, vy] = project(-0.5 - 0.05, -0.5, 0.19);
-      ctx.fillText("IV %", vx - 10, vy);
-    };
-
-    draw();
-    const ro = new ResizeObserver(draw);
-    ro.observe(canvas);
-    return () => ro.disconnect();
-  }, [surface]);
-
-  return <canvas ref={canvasRef} className="block w-full h-full" />;
-}
 
 // Shown while index-matrix is loading — hardcoded Euro Stoxx 50 snapshot
 const LOADING_INDEX: IndexRow[] = [
@@ -326,6 +127,45 @@ export function DataOverview() {
   const [selected, setSelected] = useState("ASML");
   const [expiry, setExpiry]     = useState("2026-12-15");
 
+  // ── Sidebar resize ────────────────────────────────────────────────────────
+  const [sidebarW, setSidebarW] = useState(SIDEBAR_DEFAULT);
+  const dragActive = useRef(false);
+  const dragOriginX = useRef(0);
+  const dragOriginW = useRef(SIDEBAR_DEFAULT);
+
+  const onResizeStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    dragActive.current  = true;
+    dragOriginX.current = e.clientX;
+    dragOriginW.current = sidebarW;
+    document.body.style.cursor     = "col-resize";
+    document.body.style.userSelect = "none";
+  }, [sidebarW]);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!dragActive.current) return;
+      const next = Math.min(
+        SIDEBAR_MAX,
+        Math.max(SIDEBAR_MIN, dragOriginW.current + e.clientX - dragOriginX.current),
+      );
+      setSidebarW(next);
+    };
+    const onUp = () => {
+      if (!dragActive.current) return;
+      dragActive.current             = false;
+      document.body.style.cursor     = "";
+      document.body.style.userSelect = "";
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup",   onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup",   onUp);
+    };
+  }, []);
+  // ─────────────────────────────────────────────────────────────────────────
+
   // --- Queries ---
   const { data: indexData = LOADING_INDEX } = useQuery<IndexRow[]>({
     queryKey: ["index-matrix"],
@@ -384,9 +224,12 @@ export function DataOverview() {
     : "—";
 
   return (
-    <div className="flex h-full min-h-0">
-      {/* EURO STOXX 50 sidebar */}
-      <aside className="w-60 shrink-0 border-r border-zinc-800 bg-[#131315] flex flex-col">
+    <div className="flex h-full min-h-0 overflow-hidden">
+      {/* EURO STOXX 50 sidebar — width is pointer-draggable */}
+      <aside
+        style={{ width: sidebarW }}
+        className="shrink-0 bg-[#131315] flex flex-col overflow-hidden"
+      >
         <div className="h-8 shrink-0 flex items-center justify-between px-2.5 border-b border-zinc-800 bg-[#1c1b1d]">
           <span className="text-[10px] font-bold tracking-[0.16em] uppercase text-zinc-200">EURO STOXX 50</span>
           <ChevronsUpDown className="w-3 h-3 text-zinc-500" />
@@ -430,8 +273,27 @@ export function DataOverview() {
         </div>
       </aside>
 
+      {/* ── Resize handle ─────────────────────────────────────────────────── */}
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Drag to resize sidebar"
+        onMouseDown={onResizeStart}
+        className="group relative w-1 shrink-0 cursor-col-resize select-none bg-zinc-800"
+      >
+        {/* Highlight strip — visible on hover and during active drag */}
+        <div className="absolute inset-0 transition-colors duration-100 group-hover:bg-[#adc6ff]/50" />
+        {/* Three-dot grip centred on the handle */}
+        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 flex flex-col items-center justify-center gap-[3px] opacity-0 group-hover:opacity-100 transition-opacity duration-100">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="w-[3px] h-[3px] rounded-full bg-[#adc6ff]/80" />
+          ))}
+        </div>
+      </div>
+      {/* ─────────────────────────────────────────────────────────────────── */}
+
       {/* Main grid */}
-      <div className="flex-1 min-w-0 flex flex-col">
+      <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
         {/* Context header */}
         <div className="h-10 shrink-0 border-b border-zinc-800 bg-[#0e0e10] px-3 flex items-center gap-3">
           <Database className="w-4 h-4 text-[#adc6ff]" />
@@ -519,13 +381,19 @@ export function DataOverview() {
               </>}
               padded={false}
             >
-              {surface ? (
-                <VolSurface3D surface={surface} />
-              ) : (
+              <Suspense fallback={
                 <div className="vc-mesh-bg w-full h-full flex items-center justify-center">
-                  <span className="font-mono text-[10px] text-zinc-600">LOADING SURFACE…</span>
+                  <span className="font-mono text-[10px] text-zinc-600">LOADING 3D ENGINE…</span>
                 </div>
-              )}
+              }>
+                {surface ? (
+                  <VolSurface3D surface={surface} />
+                ) : (
+                  <div className="vc-mesh-bg w-full h-full flex items-center justify-center">
+                    <span className="font-mono text-[10px] text-zinc-600">AWAITING SURFACE DATA…</span>
+                  </div>
+                )}
+              </Suspense>
             </Panel>
 
             <Panel

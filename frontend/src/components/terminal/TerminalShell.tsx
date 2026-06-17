@@ -33,7 +33,7 @@ export function TerminalShell() {
   }, [view]);
 
   return (
-    <div className="dark min-h-screen w-full bg-[#09090b] text-zinc-200 flex flex-col">
+    <div className="dark h-screen w-full overflow-hidden bg-[#09090b] text-zinc-200 flex flex-col">
       {/* Top header */}
       <header className="h-12 shrink-0 flex items-center gap-4 px-4 border-b border-zinc-800 bg-[#09090b] z-30">
         <div className="flex items-baseline gap-3">
@@ -73,7 +73,7 @@ export function TerminalShell() {
         </div>
       </header>
 
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Sidebar */}
         <aside className="w-14 shrink-0 border-r border-zinc-800 bg-[#0e0e10] flex flex-col items-center pt-6 pb-2 gap-1">
 
@@ -109,7 +109,7 @@ export function TerminalShell() {
         </aside>
 
         {/* View */}
-        <main className="flex-1 min-w-0 overflow-auto vc-scroll bg-[#09090b]">
+        <main className="flex-1 min-w-0 overflow-hidden bg-[#09090b]">
           {active}
         </main>
       </div>

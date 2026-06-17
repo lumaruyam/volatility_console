@@ -135,7 +135,7 @@ export function ShockSimulator() {
   const handleReset = () => { setSpotShock(0); setVolShock(0); setRateShock(0); };
 
   return (
-    <div className="flex flex-col gap-3 p-1">
+    <div className="h-full min-h-0 overflow-x-hidden overflow-y-auto vc-scroll flex flex-col gap-3 p-1">
       {/* Methodology strip */}
       <div className="flex flex-wrap items-center gap-2 p-2.5 border border-zinc-800 bg-[#131315]">
         <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-zinc-500 mr-1">

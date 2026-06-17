@@ -145,7 +145,7 @@ export function StrategyExecution() {
   const stratCount = positions.length;
 
   return (
-    <div className="p-3 flex flex-col gap-2.5 min-h-full">
+    <div className="p-3 flex flex-col gap-2.5 h-full min-h-0 overflow-x-hidden overflow-y-auto vc-scroll">
       {/* Header */}
       <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
         <h1 className="text-[14px] font-semibold uppercase tracking-tight flex items-center gap-2 text-zinc-100">

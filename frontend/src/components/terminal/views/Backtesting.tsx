@@ -145,7 +145,7 @@ export function Backtesting() {
     setShock(prev => (prev === s ? null : s));
 
   return (
-    <div className="p-3 flex flex-col gap-2.5 min-h-full">
+    <div className="p-3 flex flex-col gap-2.5 h-full min-h-0 overflow-x-hidden overflow-y-auto vc-scroll">
       {/* Filter ribbon */}
       <section className="border border-zinc-800 bg-[#131315] p-2 flex items-center gap-3 shrink-0 flex-wrap">
         <div className="flex items-center gap-2 px-2 py-1 border border-zinc-800 bg-[#0e0e10]">

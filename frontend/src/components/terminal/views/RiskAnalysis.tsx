@@ -180,7 +180,7 @@ export function RiskAnalysis() {
   const volColLabels   = uam?.vol_col_labels  ?? ["-30 ΔVol Shock", "ATM Baseline", "+30 ΔVol Shock"];
 
   return (
-    <div className="p-3 flex flex-col gap-2.5 min-h-full">
+    <div className="p-3 flex flex-col gap-2.5 h-full min-h-0 overflow-x-hidden overflow-y-auto vc-scroll">
       {/* Header */}
       <div className="flex items-center justify-between px-1 pb-2 border-b border-zinc-800">
         <h1 className="text-[14px] font-semibold text-zinc-100 flex items-center gap-2 uppercase tracking-tight">
@@ -221,7 +221,7 @@ export function RiskAnalysis() {
       </div>
 
       {/* Mid grid: PnL attribution | Correlation | UAM shock */}
-      <div className="grid grid-cols-12 gap-2.5" style={{ minHeight: 320 }}>
+      <div className="grid grid-cols-12 gap-2.5">
 
         {/* PnL Attribution */}
         <Panel className="col-span-4" title="PnL Attribution Grid" right={<span>T-1 → T0</span>}>
