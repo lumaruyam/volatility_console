@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vol Infra Dashboard</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+</head>
+<body>
+
+<header>
+  <h1>&#9650; Volatility Infrastructure Dashboard</h1>
+  <div class="controls">
+    <label>Underlying</label>
+    <select id="sel-underlying">
+      <option value="ESTX50">ESTX50</option>
+      <option value="SPX">SPX</option>
+      <option value="STOXX50E">STOXX50E</option>
+      <option value="CAC40">CAC40</option>
+    </select>
+    <label>Date</label>
+    <select id="sel-date"><option>—</option></select>
+    <label>Storage</label>
+    <input type="text" id="inp-storage" value="data" style="width:80px" />
+    <button class="btn-refresh" id="btn-refresh">Refresh</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- Row 1: 3D Surface (full width) -->
+  <div class="panel row-surface">
+    <div class="panel-header">
+      <h2>Implied Volatility Surface — 3D</h2>
+      <span class="badge" id="badge-surface">—</span>
+    </div>
+    <div class="chart-container" id="chart-surface">
+      <div class="placeholder"><div class="spinner"></div>Loading…</div>
+    </div>
+  </div>
+
+  <!-- Row 2: IV Smile + Term Structure -->
+  <div class="row-2col">
+    <div class="panel">
+      <div class="panel-header"><h2>IV Smile by Maturity</h2></div>
+      <div class="chart-container" id="chart-smile">
+        <div class="placeholder"><div class="spinner"></div>Loading…</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h2>ATM Term Structure</h2></div>
+      <div class="chart-container" id="chart-term">
+        <div class="placeholder"><div class="spinner"></div>Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 3: Scenario Heatmap + Greeks -->
+  <div class="row-2col">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Scenario PnL Heatmap</h2>
+        <span class="badge" id="badge-scenarios">—</span>
+      </div>
+      <div class="chart-container" id="chart-scenarios">
+        <div class="placeholder"><div class="spinner"></div>Loading…</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h2>Greeks by Position</h2></div>
+      <div class="chart-container" id="chart-greeks">
+        <div class="placeholder"><div class="spinner"></div>Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 4: Straddle + UAM -->
+  <div class="row-bottom">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>ATR Straddle Status</h2>
+        <span class="badge" id="badge-straddle">—</span>
+      </div>
+      <div id="straddle-metrics" class="metric-grid">
+        <div class="placeholder" style="height:200px"><div class="spinner"></div>Loading…</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h2>UAM Gauge</h2></div>
+      <div class="chart-container" id="chart-uam">
+        <div class="placeholder"><div class="spinner"></div>Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 5: Greek PnL Contributions (full width) -->
+  <div class="panel row-full">
+    <div class="panel-header">
+      <h2>Greek PnL Contributions</h2>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:11px;color:var(--muted)">Shock</label>
+        <select id="sel-contrib-scenario" style="font-size:12px;padding:4px 8px"></select>
+      </div>
+    </div>
+    <div class="chart-container" id="chart-greek-contrib">
+      <div class="placeholder"><div class="spinner"></div>Loading…</div>
+    </div>
+  </div>
+
+  <!-- Row 6: Historical Price + ESTX50 Constituents -->
+  <div class="row-2col">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Historical Prices</h2>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input id="inp-hist-ticker" type="text" value="^STOXX50E"
+                 style="width:96px;font-size:12px;padding:4px 8px" />
+          <button id="btn-load-hist" class="btn-refresh"
+                  style="padding:5px 12px;font-size:12px">Load</button>
+        </div>
+      </div>
+      <div class="chart-container" id="chart-historical">
+        <div class="placeholder" style="color:var(--muted)">Enter a ticker and click Load</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <h2>ESTX50 Constituents</h2>
+        <button id="btn-load-const" class="btn-refresh"
+                style="padding:5px 12px;font-size:12px">Load</button>
+      </div>
+      <div class="chart-container" id="chart-constituents">
+        <div class="placeholder" style="color:var(--muted)">Click Load to fetch constituents</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 7: Options Chain (full width) -->
+  <div class="panel row-full">
+    <div class="panel-header">
+      <h2>Options Chain</h2>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="badge" id="badge-chain">—</span>
+        <label style="font-size:11px;color:var(--muted)">Expiry</label>
+        <select id="sel-expiry" style="font-size:12px;padding:4px 8px">
+          <option value="">—</option>
+        </select>
+      </div>
+    </div>
+    <div class="chart-container" id="chart-chain">
+      <div class="placeholder"><div class="spinner"></div>Loading…</div>
+    </div>
+  </div>
+
+</main>
+
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>

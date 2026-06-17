@@ -1,0 +1,57 @@
+# Instrument universe configuration
+version: "1.1"
+
+# ---------------------------------------------------------------------------
+# Primary universe — Euro Stoxx 50 (per professor)
+# ---------------------------------------------------------------------------
+index:
+  symbol: "^STOXX50E"
+  ibkr_symbol: ESTX50
+  ibkr_sec_type: IND
+  ibkr_exchange: EUREX
+  ibkr_currency: EUR
+  description: "Euro Stoxx 50 Index"
+
+underlyings:
+  # IBKR live data (options/futures)
+  - symbol: ESTX50
+    sec_type: IND
+    exchange: EUREX
+    currency: EUR
+    yfinance_ticker: "^STOXX50E"
+    description: "Euro Stoxx 50 — primary underlying"
+
+  # Keep SPY as fallback for testing with US market hours
+  - symbol: SPY
+    sec_type: STK
+    exchange: SMART
+    currency: USD
+    yfinance_ticker: SPY
+    description: "S&P 500 ETF — dev/test fallback"
+
+options:
+  # Maturity ladder (per professor): 10d, 1m, 3m, 6m, 9m, 12m, 18m, 2y, 3y
+  maturity_ladder_days: [10, 30, 90, 180, 270, 365, 548, 730, 1095]
+
+  # Strike selection: delta-based (per professor: -30Δ to +30Δ)
+  strike_selection:
+    mode: delta_based
+    delta_range: [-0.30, 0.30]
+    delta_steps: [0.10, 0.15, 0.20, 0.25, 0.30]
+
+  day_count_convention: act/365
+
+# ---------------------------------------------------------------------------
+# Historical data (Yahoo Finance)
+# ---------------------------------------------------------------------------
+historical:
+  source: yfinance
+  index_ticker: "^STOXX50E"
+  start_date: "2019-01-01"       # 5+ years for backtesting
+  interval: "1d"                 # Daily bars — sufficient per professor
+  # Constituent tickers loaded from src/historical/yfinance_loader.py
+  fetch_constituents: true
+
+calendars:
+  exchange_calendar: EU           # Euro Stoxx 50 uses European calendar
+  settlement_calendar: EU

@@ -1,0 +1,45 @@
+# =============================================================================
+# Broker (IBKR) configuration
+# Loaded via src/utils/config.py. Sensitive fields (host, port, client_id, account)
+# are sourced from environment variables (VOL_INFRA_IBKR__*) and override these.
+# =============================================================================
+
+ibkr:
+  # Defaults; .env values override.
+  host: 127.0.0.1
+  port: 4002                        # IB Gateway paper
+  client_id: 1
+  account: ""
+
+  # Connection behavior
+  connect_timeout_s: 15
+  read_only: true                   # Step 1 must remain read-only
+
+  # Heartbeat / health checks
+  heartbeat_interval_s: 5
+  heartbeat_max_age_s: 30           # SLO target from Part XIV
+
+  # Reconnect policy (exponential backoff with jitter)
+  reconnect:
+    enabled: true
+    initial_delay_s: 1.0
+    max_delay_s: 60.0
+    backoff_multiplier: 2.0
+    jitter_pct: 0.25
+    max_attempts: 0                 # 0 = unlimited
+
+  # Pacing awareness. IBKR enforces ~50 messages/second on most APIs.
+  # We stay well under to be safe.
+  pacing:
+    max_messages_per_second: 40
+
+# Client ID reservations. Convention enforced by config validation.
+# Update this table when adding new services.
+client_id_reservations:
+  1:  bootstrap_smoke_test
+  2:  ad_hoc_query
+  10: underlying_collector
+  11: option_collector
+  12: option_collector_overflow
+  20: universe_service
+  30: replay_orchestrator

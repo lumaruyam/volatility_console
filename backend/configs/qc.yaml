@@ -1,0 +1,48 @@
+# QC threshold configuration
+# IMPORTANT: This is an economic input. Version it. Never scatter these constants in code.
+version: "1.0"
+
+quote_filters:
+  max_spread_pct: 0.25            # Reject if (ask-bid)/mid > this
+  caution_spread_pct: 0.15        # Caution warning threshold
+  max_quote_age_seconds: 60       # Reject stale quotes
+  caution_quote_age_seconds: 30   # Caution warning
+  min_open_interest: 10           # Caution if OI below this
+  require_positive_bid: true
+  intrinsic_tolerance: 0.01       # Tolerance for below-intrinsic check
+
+forward_engine:
+  strike_band_mode: nearest_liquid
+  max_candidate_count: 12
+  min_candidate_count: 2          # Need at least 2 pairs for a reliable forward
+  outlier_method: mad
+  max_robust_zscore: 3.5
+  max_spread_pct: 0.30            # Max spread to be eligible for forward estimation
+  max_forward_deviation_pct: 0.005
+
+iv_solver:
+  lower_vol: 0.0001
+  upper_vol: 5.0000
+  price_tolerance: 1.0e-6
+  max_iterations: 100
+  min_iv_convergence_ratio: 0.97
+
+surface:
+  model: svi
+  fallback_model: spline
+  min_points_per_slice: 5
+  max_rmse: 0.02
+  grid_k_min: -1.5
+  grid_k_max: 1.5
+  grid_n_points: 100
+  calendar_check_moneyness: [-0.5, 0.0, 0.5]
+
+collector:
+  max_collector_gap_seconds: 30
+  max_stale_ratio: 0.10
+
+greeks:
+  greek_sanity_tolerance: 0.01
+
+scenarios:
+  require_all_scenarios: true

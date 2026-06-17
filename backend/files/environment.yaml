@@ -1,0 +1,28 @@
+# =============================================================================
+# Environment configuration
+# Loaded via src/utils/config.py. Environment variables override these values
+# using the VOL_INFRA_RUNTIME__<KEY> naming convention (double underscore).
+# =============================================================================
+
+runtime:
+  environment: development        # development | staging | production
+  log_level: INFO                 # DEBUG | INFO | WARNING | ERROR
+  log_format: console             # console | json
+  artifacts_dir: ./artifacts
+  logs_dir: ./logs
+
+  # Maximum acceptable wall-clock drift between local UTC and NTP reference.
+  # The bootstrap smoke test enforces this.
+  clock_drift_tolerance_ms: 1000
+
+# Universe defaults used by the Step 1 bootstrap smoke test only.
+# Step 2 will replace this with a proper universe.yaml.
+bootstrap:
+  test_symbol: SPY
+  test_exchange: SMART
+  test_currency: USD
+  # Quote retrieval timeout for the smoke test (seconds).
+  quote_timeout_s: 10
+  # If True, request delayed market data (no entitlement required).
+  # Set False once OPRA / NYSE entitlements are confirmed.
+  use_delayed_data: true

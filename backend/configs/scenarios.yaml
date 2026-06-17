@@ -1,0 +1,481 @@
+# Scenario grid configuration
+# Version-controlled — never leave as a mutable notebook cell.
+# The scenario definition is part of data lineage.
+# Grid: 11 spot shocks x 7 vol shocks = 77 combinations.
+# Spot shocks: -25/-20/-15/-10/-5/0/+5/+10/+15/+20/+25 %
+# Vol shocks:  -15/-10/-5/0/+5/+10/+15 vol points (absolute)
+version: "2.0"
+
+scenarios:
+  # Spot -25%
+  - scenario_id: sm25_vm15
+    spot_shift_pct: -0.25
+    vol_shift_abs: -0.15
+    time_roll_days: 0
+    description: "Spot -25%, vol -15 pts"
+
+  - scenario_id: sm25_vm10
+    spot_shift_pct: -0.25
+    vol_shift_abs: -0.1
+    time_roll_days: 0
+    description: "Spot -25%, vol -10 pts"
+
+  - scenario_id: sm25_vm5
+    spot_shift_pct: -0.25
+    vol_shift_abs: -0.05
+    time_roll_days: 0
+    description: "Spot -25%, vol -5 pts"
+
+  - scenario_id: sm25_v0
+    spot_shift_pct: -0.25
+    vol_shift_abs: 0.0
+    time_roll_days: 0
+    description: "Spot -25%, vol +0 pts"
+
+  - scenario_id: sm25_vp5
+    spot_shift_pct: -0.25
+    vol_shift_abs: 0.05
+    time_roll_days: 0
+    description: "Spot -25%, vol +5 pts"
+
+  - scenario_id: sm25_vp10
+    spot_shift_pct: -0.25
+    vol_shift_abs: 0.1
+    time_roll_days: 0
+    description: "Spot -25%, vol +10 pts"
+
+  - scenario_id: sm25_vp15
+    spot_shift_pct: -0.25
+    vol_shift_abs: 0.15
+    time_roll_days: 0
+    description: "Spot -25%, vol +15 pts"
+
+  # Spot -20%
+  - scenario_id: sm20_vm15
+    spot_shift_pct: -0.2
+    vol_shift_abs: -0.15
+    time_roll_days: 0
+    description: "Spot -20%, vol -15 pts"
+
+  - scenario_id: sm20_vm10
+    spot_shift_pct: -0.2
+    vol_shift_abs: -0.1
+    time_roll_days: 0
+    description: "Spot -20%, vol -10 pts"
+
+  - scenario_id: sm20_vm5
+    spot_shift_pct: -0.2
+    vol_shift_abs: -0.05
+    time_roll_days: 0
+    description: "Spot -20%, vol -5 pts"
+
+  - scenario_id: sm20_v0
+    spot_shift_pct: -0.2
+    vol_shift_abs: 0.0
+    time_roll_days: 0
+    description: "Spot -20%, vol +0 pts"
+
+  - scenario_id: sm20_vp5
+    spot_shift_pct: -0.2
+    vol_shift_abs: 0.05
+    time_roll_days: 0
+    description: "Spot -20%, vol +5 pts"
+
+  - scenario_id: sm20_vp10
+    spot_shift_pct: -0.2
+    vol_shift_abs: 0.1
+    time_roll_days: 0
+    description: "Spot -20%, vol +10 pts"
+
+  - scenario_id: sm20_vp15
+    spot_shift_pct: -0.2
+    vol_shift_abs: 0.15
+    time_roll_days: 0
+    description: "Spot -20%, vol +15 pts"
+
+  # Spot -15%
+  - scenario_id: sm15_vm15
+    spot_shift_pct: -0.15
+    vol_shift_abs: -0.15
+    time_roll_days: 0
+    description: "Spot -15%, vol -15 pts"
+
+  - scenario_id: sm15_vm10
+    spot_shift_pct: -0.15
+    vol_shift_abs: -0.1
+    time_roll_days: 0
+    description: "Spot -15%, vol -10 pts"
+
+  - scenario_id: sm15_vm5
+    spot_shift_pct: -0.15
+    vol_shift_abs: -0.05
+    time_roll_days: 0
+    description: "Spot -15%, vol -5 pts"
+
+  - scenario_id: sm15_v0
+    spot_shift_pct: -0.15
+    vol_shift_abs: 0.0
+    time_roll_days: 0
+    description: "Spot -15%, vol +0 pts"
+
+  - scenario_id: sm15_vp5
+    spot_shift_pct: -0.15
+    vol_shift_abs: 0.05
+    time_roll_days: 0
+    description: "Spot -15%, vol +5 pts"
+
+  - scenario_id: sm15_vp10
+    spot_shift_pct: -0.15
+    vol_shift_abs: 0.1
+    time_roll_days: 0
+    description: "Spot -15%, vol +10 pts"
+
+  - scenario_id: sm15_vp15
+    spot_shift_pct: -0.15
+    vol_shift_abs: 0.15
+    time_roll_days: 0
+    description: "Spot -15%, vol +15 pts"
+
+  # Spot -10%
+  - scenario_id: sm10_vm15
+    spot_shift_pct: -0.1
+    vol_shift_abs: -0.15
+    time_roll_days: 0
+    description: "Spot -10%, vol -15 pts"
+
+  - scenario_id: sm10_vm10
+    spot_shift_pct: -0.1
+    vol_shift_abs: -0.1
+    time_roll_days: 0
+    description: "Spot -10%, vol -10 pts"
+
+  - scenario_id: sm10_vm5
+    spot_shift_pct: -0.1
+    vol_shift_abs: -0.05
+    time_roll_days: 0
+    description: "Spot -10%, vol -5 pts"
+
+  - scenario_id: sm10_v0
+    spot_shift_pct: -0.1
+    vol_shift_abs: 0.0
+    time_roll_days: 0
+    description: "Spot -10%, vol +0 pts"
+
+  - scenario_id: sm10_vp5
+    spot_shift_pct: -0.1
+    vol_shift_abs: 0.05
+    time_roll_days: 0
+    description: "Spot -10%, vol +5 pts"
+
+  - scenario_id: sm10_vp10
+    spot_shift_pct: -0.1
+    vol_shift_abs: 0.1
+    time_roll_days: 0
+    description: "Spot -10%, vol +10 pts"
+
+  - scenario_id: sm10_vp15
+    spot_shift_pct: -0.1
+    vol_shift_abs: 0.15
+    time_roll_days: 0
+    description: "Spot -10%, vol +15 pts"
+
+  # Spot -5%
+  - scenario_id: sm5_vm15
+    spot_shift_pct: -0.05
+    vol_shift_abs: -0.15
+    time_roll_days: 0
+    description: "Spot -5%, vol -15 pts"
+
+  - scenario_id: sm5_vm10
+    spot_shift_pct: -0.05
+    vol_shift_abs: -0.1
+    time_roll_days: 0
+    description: "Spot -5%, vol -10 pts"
+
+  - scenario_id: sm5_vm5
+    spot_shift_pct: -0.05
+    vol_shift_abs: -0.05
+    time_roll_days: 0
+    description: "Spot -5%, vol -5 pts"
+
+  - scenario_id: sm5_v0
+    spot_shift_pct: -0.05
+    vol_shift_abs: 0.0
+    time_roll_days: 0
+    description: "Spot -5%, vol +0 pts"
+
+  - scenario_id: sm5_vp5
+    spot_shift_pct: -0.05
+    vol_shift_abs: 0.05
+    time_roll_days: 0
+    description: "Spot -5%, vol +5 pts"
+
+  - scenario_id: sm5_vp10
+    spot_shift_pct: -0.05
+    vol_shift_abs: 0.1
+    time_roll_days: 0
+    description: "Spot -5%, vol +10 pts"
+
+  - scenario_id: sm5_vp15
+    spot_shift_pct: -0.05
+    vol_shift_abs: 0.15
+    time_roll_days: 0
+    description: "Spot -5%, vol +15 pts"
+
+  # Spot +0%
+  - scenario_id: s0_vm15
+    spot_shift_pct: 0.0
+    vol_shift_abs: -0.15
+    time_roll_days: 0
+    description: "Spot +0%, vol -15 pts"
+
+  - scenario_id: s0_vm10
+    spot_shift_pct: 0.0
+    vol_shift_abs: -0.1
+    time_roll_days: 0
+    description: "Spot +0%, vol -10 pts"
+
+  - scenario_id: s0_vm5
+    spot_shift_pct: 0.0
+    vol_shift_abs: -0.05
+    time_roll_days: 0
+    description: "Spot +0%, vol -5 pts"
+
+  - scenario_id: s0_v0
+    spot_shift_pct: 0.0
+    vol_shift_abs: 0.0
+    time_roll_days: 0
+    description: "Spot +0%, vol +0 pts"
+
+  - scenario_id: s0_vp5
+    spot_shift_pct: 0.0
+    vol_shift_abs: 0.05
+    time_roll_days: 0
+    description: "Spot +0%, vol +5 pts"
+
+  - scenario_id: s0_vp10
+    spot_shift_pct: 0.0
+    vol_shift_abs: 0.1
+    time_roll_days: 0
+    description: "Spot +0%, vol +10 pts"
+
+  - scenario_id: s0_vp15
+    spot_shift_pct: 0.0
+    vol_shift_abs: 0.15
+    time_roll_days: 0
+    description: "Spot +0%, vol +15 pts"
+
+  # Spot +5%
+  - scenario_id: sp5_vm15
+    spot_shift_pct: 0.05
+    vol_shift_abs: -0.15
+    time_roll_days: 0
+    description: "Spot +5%, vol -15 pts"
+
+  - scenario_id: sp5_vm10
+    spot_shift_pct: 0.05
+    vol_shift_abs: -0.1
+    time_roll_days: 0
+    description: "Spot +5%, vol -10 pts"
+
+  - scenario_id: sp5_vm5
+    spot_shift_pct: 0.05
+    vol_shift_abs: -0.05
+    time_roll_days: 0
+    description: "Spot +5%, vol -5 pts"
+
+  - scenario_id: sp5_v0
+    spot_shift_pct: 0.05
+    vol_shift_abs: 0.0
+    time_roll_days: 0
+    description: "Spot +5%, vol +0 pts"
+
+  - scenario_id: sp5_vp5
+    spot_shift_pct: 0.05
+    vol_shift_abs: 0.05
+    time_roll_days: 0
+    description: "Spot +5%, vol +5 pts"
+
+  - scenario_id: sp5_vp10
+    spot_shift_pct: 0.05
+    vol_shift_abs: 0.1
+    time_roll_days: 0
+    description: "Spot +5%, vol +10 pts"
+
+  - scenario_id: sp5_vp15
+    spot_shift_pct: 0.05
+    vol_shift_abs: 0.15
+    time_roll_days: 0
+    description: "Spot +5%, vol +15 pts"
+
+  # Spot +10%
+  - scenario_id: sp10_vm15
+    spot_shift_pct: 0.1
+    vol_shift_abs: -0.15
+    time_roll_days: 0
+    description: "Spot +10%, vol -15 pts"
+
+  - scenario_id: sp10_vm10
+    spot_shift_pct: 0.1
+    vol_shift_abs: -0.1
+    time_roll_days: 0
+    description: "Spot +10%, vol -10 pts"
+
+  - scenario_id: sp10_vm5
+    spot_shift_pct: 0.1
+    vol_shift_abs: -0.05
+    time_roll_days: 0
+    description: "Spot +10%, vol -5 pts"
+
+  - scenario_id: sp10_v0
+    spot_shift_pct: 0.1
+    vol_shift_abs: 0.0
+    time_roll_days: 0
+    description: "Spot +10%, vol +0 pts"
+
+  - scenario_id: sp10_vp5
+    spot_shift_pct: 0.1
+    vol_shift_abs: 0.05
+    time_roll_days: 0
+    description: "Spot +10%, vol +5 pts"
+
+  - scenario_id: sp10_vp10
+    spot_shift_pct: 0.1
+    vol_shift_abs: 0.1
+    time_roll_days: 0
+    description: "Spot +10%, vol +10 pts"
+
+  - scenario_id: sp10_vp15
+    spot_shift_pct: 0.1
+    vol_shift_abs: 0.15
+    time_roll_days: 0
+    description: "Spot +10%, vol +15 pts"
+
+  # Spot +15%
+  - scenario_id: sp15_vm15
+    spot_shift_pct: 0.15
+    vol_shift_abs: -0.15
+    time_roll_days: 0
+    description: "Spot +15%, vol -15 pts"
+
+  - scenario_id: sp15_vm10
+    spot_shift_pct: 0.15
+    vol_shift_abs: -0.1
+    time_roll_days: 0
+    description: "Spot +15%, vol -10 pts"
+
+  - scenario_id: sp15_vm5
+    spot_shift_pct: 0.15
+    vol_shift_abs: -0.05
+    time_roll_days: 0
+    description: "Spot +15%, vol -5 pts"
+
+  - scenario_id: sp15_v0
+    spot_shift_pct: 0.15
+    vol_shift_abs: 0.0
+    time_roll_days: 0
+    description: "Spot +15%, vol +0 pts"
+
+  - scenario_id: sp15_vp5
+    spot_shift_pct: 0.15
+    vol_shift_abs: 0.05
+    time_roll_days: 0
+    description: "Spot +15%, vol +5 pts"
+
+  - scenario_id: sp15_vp10
+    spot_shift_pct: 0.15
+    vol_shift_abs: 0.1
+    time_roll_days: 0
+    description: "Spot +15%, vol +10 pts"
+
+  - scenario_id: sp15_vp15
+    spot_shift_pct: 0.15
+    vol_shift_abs: 0.15
+    time_roll_days: 0
+    description: "Spot +15%, vol +15 pts"
+
+  # Spot +20%
+  - scenario_id: sp20_vm15
+    spot_shift_pct: 0.2
+    vol_shift_abs: -0.15
+    time_roll_days: 0
+    description: "Spot +20%, vol -15 pts"
+
+  - scenario_id: sp20_vm10
+    spot_shift_pct: 0.2
+    vol_shift_abs: -0.1
+    time_roll_days: 0
+    description: "Spot +20%, vol -10 pts"
+
+  - scenario_id: sp20_vm5
+    spot_shift_pct: 0.2
+    vol_shift_abs: -0.05
+    time_roll_days: 0
+    description: "Spot +20%, vol -5 pts"
+
+  - scenario_id: sp20_v0
+    spot_shift_pct: 0.2
+    vol_shift_abs: 0.0
+    time_roll_days: 0
+    description: "Spot +20%, vol +0 pts"
+
+  - scenario_id: sp20_vp5
+    spot_shift_pct: 0.2
+    vol_shift_abs: 0.05
+    time_roll_days: 0
+    description: "Spot +20%, vol +5 pts"
+
+  - scenario_id: sp20_vp10
+    spot_shift_pct: 0.2
+    vol_shift_abs: 0.1
+    time_roll_days: 0
+    description: "Spot +20%, vol +10 pts"
+
+  - scenario_id: sp20_vp15
+    spot_shift_pct: 0.2
+    vol_shift_abs: 0.15
+    time_roll_days: 0
+    description: "Spot +20%, vol +15 pts"
+
+  # Spot +25%
+  - scenario_id: sp25_vm15
+    spot_shift_pct: 0.25
+    vol_shift_abs: -0.15
+    time_roll_days: 0
+    description: "Spot +25%, vol -15 pts"
+
+  - scenario_id: sp25_vm10
+    spot_shift_pct: 0.25
+    vol_shift_abs: -0.1
+    time_roll_days: 0
+    description: "Spot +25%, vol -10 pts"
+
+  - scenario_id: sp25_vm5
+    spot_shift_pct: 0.25
+    vol_shift_abs: -0.05
+    time_roll_days: 0
+    description: "Spot +25%, vol -5 pts"
+
+  - scenario_id: sp25_v0
+    spot_shift_pct: 0.25
+    vol_shift_abs: 0.0
+    time_roll_days: 0
+    description: "Spot +25%, vol +0 pts"
+
+  - scenario_id: sp25_vp5
+    spot_shift_pct: 0.25
+    vol_shift_abs: 0.05
+    time_roll_days: 0
+    description: "Spot +25%, vol +5 pts"
+
+  - scenario_id: sp25_vp10
+    spot_shift_pct: 0.25
+    vol_shift_abs: 0.1
+    time_roll_days: 0
+    description: "Spot +25%, vol +10 pts"
+
+  - scenario_id: sp25_vp15
+    spot_shift_pct: 0.25
+    vol_shift_abs: 0.15
+    time_roll_days: 0
+    description: "Spot +25%, vol +15 pts"

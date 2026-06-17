@@ -1,0 +1,36 @@
+# ATR Straddle strategy configuration
+# All thresholds version-controlled; never hard-coded in source.
+version: "1.0"
+
+underlying: "ESTX50"
+strategy: "atr_straddle"
+portfolio_id: "STRADDLE_PAPER"
+
+straddle:
+  # Target expiry when opening: closest available to this many months out
+  target_dte_months: 12
+
+  # Roll trigger: open a new straddle when remaining DTE reaches this level
+  # 270 days ≈ 9 months — professor requirement
+  roll_dte_days: 270
+
+  # Delta target for ATM strike selection: pick strike with |delta| closest to this
+  atm_delta_target: 0.50
+
+  # Position sizing mode: "fixed_notional" | "vol_adjusted"
+  sizing_mode: "fixed_notional"
+
+  # Notional (EUR) used by both sizing modes
+  notional: 100000.0
+
+  # Contract multiplier for EuroStoxx 50 index options
+  multiplier: 10.0
+
+  # Maximum deviation from target delta still accepted as ATM
+  max_delta_deviation: 0.10
+
+order:
+  order_type: "LMT"          # "MKT" | "LMT"
+  time_in_force: "DAY"       # "DAY" | "GTC"
+  paper_trading: true
+  read_only: false            # set true in live monitoring mode

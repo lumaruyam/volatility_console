@@ -1,0 +1,23 @@
+# Pricing engine configuration
+version: "1.0"
+
+european_pricer:
+  model: black_scholes
+  day_count: act/365
+
+american_pricer:
+  model: crr_binomial
+  n_steps: 200        # Tree steps — increase for accuracy, decrease for speed
+  day_count: act/365
+
+greeks:
+  # Finite-difference bump sizes (American pricer)
+  spot_bump_pct: 0.001        # 0.1% spot bump for delta/gamma
+  vol_bump_abs: 0.001         # 0.1 percentage-point vol bump for vega
+  # Unit conventions (must match aggregation.py)
+  vega_convention: per_percentage_point   # vega_per_point = ∂V/∂σ / 100
+  theta_convention: per_calendar_day
+
+rates:
+  risk_free_rate: 0.05    # Default rate if not loaded from external source
+  source: config          # config | curve_file | live_feed
