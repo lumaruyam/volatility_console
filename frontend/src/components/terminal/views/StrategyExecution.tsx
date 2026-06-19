@@ -254,7 +254,7 @@ export function StrategyExecution() {
   });
 
   // ── Derived ───────────────────────────────────────────────────────────────
-  const latency     = latencyData ? `${latencyData.latency_ms}ms` : "—";
+  const latency     = latencyData?.latency_ms != null ? `${latencyData.latency_ms}ms` : "—";
   const stratCount  = positions.length;
 
   const filteredPositions = useMemo(() => positions.filter(p => {

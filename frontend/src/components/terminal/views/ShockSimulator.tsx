@@ -107,11 +107,11 @@ const FB_HEDGE_SUGGESTIONS: HedgeSuggestion[] = [
 ];
 
 const FB_LIQUIDITY: LiquidityImpactRow[] = [
-  { contract: "SX5E 4000P DEC26", pre_spread_pct: 2.1,  post_spread_pct: 8.4,  volume_impact_pct: -42 },
-  { contract: "ASML 900C SEP26",  pre_spread_pct: 5.9,  post_spread_pct: 14.2, volume_impact_pct: -61 },
-  { contract: "SX5E 4400C DEC26", pre_spread_pct: 1.8,  post_spread_pct: 6.3,  volume_impact_pct: -35 },
-  { contract: "MC.PA 500P SEP26", pre_spread_pct: 8.2,  post_spread_pct: 19.7, volume_impact_pct: -74 },
-  { contract: "SX5E 3800P MAR27", pre_spread_pct: 3.4,  post_spread_pct: 9.8,  volume_impact_pct: -48 },
+  { contract: "SX5E 4000P DEC26", pre_spread_pct: 2.1, post_spread_pct: 2.1, volume_impact_pct: 0 },
+  { contract: "ASML 900C SEP26",  pre_spread_pct: 5.9, post_spread_pct: 5.9, volume_impact_pct: 0 },
+  { contract: "SX5E 4400C DEC26", pre_spread_pct: 1.8, post_spread_pct: 1.8, volume_impact_pct: 0 },
+  { contract: "MC.PA 500P SEP26", pre_spread_pct: 8.2, post_spread_pct: 8.2, volume_impact_pct: 0 },
+  { contract: "SX5E 3800P MAR27", pre_spread_pct: 3.4, post_spread_pct: 3.4, volume_impact_pct: 0 },
 ];
 
 // ---------------------------------------------------------------------------
@@ -274,7 +274,8 @@ export function ShockSimulator() {
   };
 
   return (
-    <div className="h-full min-h-0 overflow-x-hidden overflow-y-auto vc-scroll flex flex-col gap-3 p-1">
+    <div className="h-full overflow-y-auto overflow-x-hidden vc-scroll">
+    <div className="flex flex-col gap-3 p-1 pb-6">
 
       {/* ── Filter + methodology strip ──────────────────────────────────── */}
       <div className="flex flex-col gap-2 p-2.5 border border-zinc-800 bg-[#131315]">
@@ -607,6 +608,7 @@ export function ShockSimulator() {
           </div>
         </Panel>
       )}
+    </div>
     </div>
   );
 }

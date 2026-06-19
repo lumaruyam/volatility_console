@@ -203,6 +203,12 @@ def _compute_pnl_series(dates: list[str], closes: np.ndarray, strategy_id: str) 
         for i in idx
     ]
 
+    # Avg trade P&L in EUR: assume NAV of €26M, each annual roll = one "trade"
+    _NAV_EUR = 26_000_000
+    years = max(1.0, n / 252)
+    total_pnl_eur = cumul_ret_pct / 100 * _NAV_EUR
+    avg_trade_pnl_eur = round(total_pnl_eur / years)
+
     return {
         "timestamp_vector":      [dates[i] for i in idx],
         "cumulative_pnl_vector": [round(float(cumul_strat[i] * 100), 3) for i in idx],
@@ -216,6 +222,7 @@ def _compute_pnl_series(dates: list[str], closes: np.ndarray, strategy_id: str) 
             "rf_rate":                4.5,
             "win_rate_pct":           round(win_rate, 1),
             "max_drawdown_pct":       round(max_dd, 2),
+            "avg_trade_pnl_eur":      avg_trade_pnl_eur,
         },
     }
 
@@ -247,5 +254,6 @@ def _empty_result() -> dict:
             "cumulative_pnl_ann_pct": 0.0, "vs_benchmark_pct": 0.0,
             "sharpe": 0.0, "rf_rate": 4.5,
             "win_rate_pct": 0.0, "max_drawdown_pct": 0.0,
+            "avg_trade_pnl_eur": 0,
         },
     }

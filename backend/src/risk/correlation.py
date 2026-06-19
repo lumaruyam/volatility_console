@@ -84,7 +84,20 @@ def _compute_from_market_data(tickers: list[str], window_days: int) -> dict:
         raise ValueError("Insufficient overlapping data")
 
     corr = combined.corr(method="pearson")
-    matrix = [[round(corr.loc[t1, t2], 4) for t2 in tickers] for t1 in tickers]
+    n = len(tickers)
+    raw = [[round(corr.loc[t1, t2], 4) for t2 in tickers] for t1 in tickers]
+    # Symmetrize: Pearson is theoretically symmetric, but floating-point and
+    # any data-alignment edge cases can produce corr[i][j] != corr[j][i].
+    # Force the upper triangle to match the lower triangle so the displayed
+    # matrix is always valid. The diagonal is always 1.0.
+    matrix = [
+        [
+            1.0 if i == j
+            else round((raw[i][j] + raw[j][i]) / 2, 4)
+            for j in range(n)
+        ]
+        for i in range(n)
+    ]
     return {"tickers": tickers, "matrix": matrix}
 
 

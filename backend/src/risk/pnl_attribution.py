@@ -41,7 +41,7 @@ def compute_pnl_attribution(
         dS_pct, d_sigma = _fetch_realized_moves(spot_ticker)
     except Exception as exc:
         log.warning("pnl_attribution: realized move fetch failed (%s) — using defaults", exc)
-        dS_pct, d_sigma = 0.005, 0.001   # +0.5% spot, +0.1 vol point
+        dS_pct, d_sigma = 0.005, 0.01    # +0.5% spot, +1 vol point
 
     spot_approx = 4_952.0
     dS = spot_approx * dS_pct
@@ -75,5 +75,5 @@ def _fetch_realized_moves(spot_ticker: str) -> tuple[float, float]:
 
     closes = df["Close"].dropna()
     dS_pct = float((closes.iloc[-1] - closes.iloc[-2]) / closes.iloc[-2])
-    d_sigma = 0.001   # yfinance has no IV; use a tiny synthetic vol move
+    d_sigma = 0.01    # yfinance has no IV; assume 1 vol point daily move
     return dS_pct, d_sigma

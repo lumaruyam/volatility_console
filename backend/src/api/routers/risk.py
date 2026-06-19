@@ -137,10 +137,10 @@ def positions(portfolio: str = "SX5E_STRADDLE") -> list[dict]:
     """Portfolio positions with mark-to-market and unrealised PnL."""
     spot = PORTFOLIO_SPOT
     return [
-        {"contract": f"SX5E 20261218 {int(spot * 0.95)}C", "qty": 100, "mkt_value": 125_000, "avg_cost": 1_180, "unrealised_pnl":  7_000},
-        {"contract": f"SX5E 20261218 {int(spot * 0.95)}P", "qty": 100, "mkt_value": 118_000, "avg_cost": 1_250, "unrealised_pnl": -7_000},
-        {"contract": f"SX5E 20270618 {int(spot * 1.05)}C", "qty":  50, "mkt_value":  45_000, "avg_cost":   900, "unrealised_pnl":  2_500},
-        {"contract": f"SX5E 20270618 {int(spot * 0.90)}P", "qty":  50, "mkt_value":  52_000, "avg_cost":   980, "unrealised_pnl":  2_000},
+        {"contract": f"SX5E 20261218 {int(spot * 0.95)}C", "qty": 100, "mkt_value": 125_000, "avg_cost": 1_180, "unrealised_pnl": 125_000 - 1_180 * 100},
+        {"contract": f"SX5E 20261218 {int(spot * 0.95)}P", "qty": 100, "mkt_value": 118_000, "avg_cost": 1_250, "unrealised_pnl": 118_000 - 1_250 * 100},
+        {"contract": f"SX5E 20270618 {int(spot * 1.05)}C", "qty":  50, "mkt_value":  45_000, "avg_cost":   900, "unrealised_pnl":  45_000 -   900 *  50},
+        {"contract": f"SX5E 20270618 {int(spot * 0.90)}P", "qty":  50, "mkt_value":  52_000, "avg_cost":   980, "unrealised_pnl":  52_000 -   980 *  50},
     ]
 
 

@@ -81,8 +81,9 @@ def liquidity_impact(body: LiquidityImpactRequest) -> list[dict]:
     ]
     for row in rows:
         row["post_spread_pct"] = round(row["pre_spread_pct"] * multiplier, 2)
-        row["volume_impact_pct"] = round(
-            row["volume_impact_pct"] * (1.0 + abs_shock * 0.02), 1
+        row["volume_impact_pct"] = (
+            0 if abs_shock == 0
+            else round(row["volume_impact_pct"] * (1.0 + abs_shock * 0.02), 1)
         )
     return rows
 

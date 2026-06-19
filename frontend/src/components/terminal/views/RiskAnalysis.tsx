@@ -143,8 +143,8 @@ const FB_CORR = [
 const FB_POSITIONS: PositionRow[] = [
   { contract: "SX5E 20261218 4000C", qty:  100, mkt_value:  125_000, avg_cost: 1_180, unrealised_pnl:   7_000 },
   { contract: "SX5E 20261218 4000P", qty:  100, mkt_value:  118_000, avg_cost: 1_250, unrealised_pnl:  -7_000 },
-  { contract: "SX5E 20270618 4200C", qty:   50, mkt_value:   45_000, avg_cost:   900, unrealised_pnl:   2_500 },
-  { contract: "SX5E 20270618 3800P", qty:   50, mkt_value:   52_000, avg_cost:   980, unrealised_pnl:   2_000 },
+  { contract: "SX5E 20270618 4200C", qty:   50, mkt_value:   45_000, avg_cost:   900, unrealised_pnl:       0 },
+  { contract: "SX5E 20270618 3800P", qty:   50, mkt_value:   52_000, avg_cost:   980, unrealised_pnl:   3_000 },
 ];
 
 const FB_RISK_AGGS: RiskAgg[] = [
@@ -309,8 +309,6 @@ export function RiskAnalysis() {
     ? [
         { l: "Delta", v: pnl.delta_pnl },
         { l: "Gamma", v: pnl.gamma_pnl },
-        // NOTE: vega_pnl may be returned in €k by the API (850 = €850K).
-        // If the bar looks 1000× too small vs the Vega KPI, multiply by 1000 here.
         { l: "Vega",  v: pnl.vega_pnl },
         { l: "Theta", v: pnl.theta_pnl },
         { l: "Rho",   v: pnl.rho_pnl  },
@@ -327,7 +325,19 @@ export function RiskAnalysis() {
 
   // ── Derived: Correlation ──────────────────────────────────────────────────
   const corrTickers = corrData?.tickers ?? FB_TICKERS;
-  const corrMatrix  = corrData?.matrix  ?? FB_CORR;
+  const rawMatrix   = corrData?.matrix  ?? FB_CORR;
+  // Enforce symmetry: if the API returns a row where an off-diagonal value
+  // equals 1.0 (copied-diagonal bug) or disagrees with its mirror, prefer
+  // the non-trivial side. Pearson correlation is theoretically symmetric so
+  // this only matters when floating-point or data-alignment bugs creep in.
+  const corrMatrix = rawMatrix.map((row, i) =>
+    row.map((val, j) => {
+      if (i === j) return 1.0;
+      const mirror = rawMatrix[j]?.[i] ?? val;
+      if (Math.abs(val - 1.0) < 0.001 && i !== j) return mirror;
+      return val;
+    })
+  );
 
   const portfolioLabel = PORTFOLIOS.find(p => p.value === portfolio)?.label ?? portfolio;
 

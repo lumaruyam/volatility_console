@@ -69,27 +69,133 @@ _POSITIONS = [
         "strategy_id":           "strat_001",
         "strategy_name":         "SX5E 12-Month Straddle",
         "strategy_label":        "ALPHA_CORE_V1",
+        "strategy_type":         "STRADDLE",
+        "status":                "OPEN",
         "target_strike":         "4200 / 4200",
         "expiry":                "12M (Dec 26)",
+        "days_to_expiry":        184,
         "open_interest":         1450,
         "allocated_margin_eur":  2_400_000,
         "allocated_margin_pct":  14.2,
         "pnl_intraday_eur":      12_450,
         "live_exec":             True,
         "legs":                  ["Call 4200 DEC26", "Put 4200 DEC26"],
+        "total_delta":           0.05,
+        "total_vega":            4_250,
     },
     {
         "strategy_id":           "strat_002",
-        "strategy_name":         "Dispersion Basket",
+        "strategy_name":         "Dispersion Basket Q3",
         "strategy_label":        "VOL_ARB_Q3",
-        "target_strike":         "N/A",
+        "strategy_type":         "DISPERSION",
+        "status":                "OPEN",
+        "target_strike":         "SX5E 4200 (basket)",
         "expiry":                "3M (Sep 26)",
+        "days_to_expiry":        85,
         "open_interest":         8200,
         "allocated_margin_eur":  5_100_000,
         "allocated_margin_pct":  22.5,
         "pnl_intraday_eur":      -3_210,
         "live_exec":             True,
         "legs":                  [],
+        "total_delta":           0.18,
+        "total_vega":            3_204,
+        "constituent_strikes": [
+            {"ticker": "ASML",  "strike": 900},
+            {"ticker": "MC.PA", "strike": 500},
+            {"ticker": "SAP",   "strike": 140},
+            {"ticker": "SIE",   "strike": 270},
+        ],
+    },
+    {
+        "strategy_id":           "strat_003",
+        "strategy_name":         "SX5E Calendar Spread",
+        "strategy_label":        "CAL_SPD_DEC26",
+        "strategy_type":         "CALENDAR",
+        "status":                "OPEN",
+        "target_strike":         "4200",
+        "expiry":                "6M / 12M (Sep–Dec 26)",
+        "days_to_expiry":        184,
+        "open_interest":         620,
+        "allocated_margin_eur":  780_000,
+        "allocated_margin_pct":  3.0,
+        "pnl_intraday_eur":      2_140,
+        "live_exec":             True,
+        "legs":                  ["Long Call 4200 SEP26", "Short Call 4200 DEC26"],
+        "total_delta":           0.03,
+        "total_vega":            1_850,
+    },
+    {
+        "strategy_id":           "strat_004",
+        "strategy_name":         "SX5E Butterfly Dec26",
+        "strategy_label":        "BFLY_DEC26",
+        "strategy_type":         "BUTTERFLY",
+        "status":                "OPEN",
+        "target_strike":         "4000 / 4200 / 4400",
+        "expiry":                "6M (Dec 26)",
+        "days_to_expiry":        184,
+        "open_interest":         390,
+        "allocated_margin_eur":  420_000,
+        "allocated_margin_pct":  1.6,
+        "pnl_intraday_eur":      -540,
+        "live_exec":             False,
+        "legs":                  ["Long Call 4000 DEC26", "Short 2× Call 4200 DEC26", "Long Call 4400 DEC26"],
+        "total_delta":           0.01,
+        "total_vega":            -620,
+    },
+    {
+        "strategy_id":           "strat_005",
+        "strategy_name":         "SX5E Jun26 Straddle",
+        "strategy_label":        "ALPHA_CORE_V0",
+        "strategy_type":         "STRADDLE",
+        "status":                "CLOSED",
+        "target_strike":         "4100 / 4100",
+        "expiry":                "Expired (Jun 26)",
+        "days_to_expiry":        0,
+        "open_interest":         0,
+        "allocated_margin_eur":  0,
+        "allocated_margin_pct":  0.0,
+        "pnl_intraday_eur":      18_720,
+        "live_exec":             False,
+        "legs":                  ["Call 4100 JUN26", "Put 4100 JUN26"],
+        "total_delta":           0.0,
+        "total_vega":            0,
+    },
+    {
+        "strategy_id":           "strat_006",
+        "strategy_name":         "SX5E Sep26 Straddle → Dec26",
+        "strategy_label":        "ALPHA_CORE_V1_ROLL",
+        "strategy_type":         "STRADDLE",
+        "status":                "ROLLED",
+        "target_strike":         "4150 → 4200",
+        "expiry":                "Rolled to Dec 26",
+        "days_to_expiry":        184,
+        "open_interest":         880,
+        "allocated_margin_eur":  1_950_000,
+        "allocated_margin_pct":  7.5,
+        "pnl_intraday_eur":      4_310,
+        "live_exec":             False,
+        "legs":                  ["Call 4200 DEC26", "Put 4200 DEC26"],
+        "total_delta":           0.02,
+        "total_vega":            2_100,
+    },
+    {
+        "strategy_id":           "strat_007",
+        "strategy_name":         "ASML Straddle Dec26",
+        "strategy_label":        "SINGLE_STOCK_V1",
+        "strategy_type":         "STRADDLE",
+        "status":                "PENDING",
+        "target_strike":         "900 / 900",
+        "expiry":                "6M (Dec 26)",
+        "days_to_expiry":        184,
+        "open_interest":         0,
+        "allocated_margin_eur":  640_000,
+        "allocated_margin_pct":  2.5,
+        "pnl_intraday_eur":      0,
+        "live_exec":             False,
+        "legs":                  ["Call 900 DEC26", "Put 900 DEC26"],
+        "total_delta":           0.0,
+        "total_vega":            1_420,
     },
 ]
 
@@ -106,7 +212,7 @@ def latency() -> dict:
     rng   = random.Random(int(time.monotonic() * 1000) % 997)
     base  = round(3.8 + rng.uniform(-0.6, 1.4), 2)
     return {
-        "current_ms": base,
+        "latency_ms": base,
         "avg_ms":     round(base + rng.uniform(0.4, 1.2), 2),
         "p99_ms":     round(base + rng.uniform(5.0, 10.0), 2),
         "source":     "yfinance_fallback",
@@ -196,18 +302,43 @@ def _positions_from_ibkr(adapter) -> list[dict]:
             f"{int(strike)} / {int(strike)}" if calls and puts else str(int(strike))
         )
 
+        # Rough ATM Greeks: call delta ≈ +0.52, put delta ≈ -0.52 per contract
+        # Vega ≈ S × N'(0) × √T per contract per 1 vol pt (S ≈ strike for ATM)
+        import math as _math
+        try:
+            exp_date_obj = datetime.strptime(expiry_mo + "15", "%Y%m%d")
+            days_to_exp = max(0, (exp_date_obj.date() - datetime.now().date()).days)
+            T_years = max(0.01, days_to_exp / 365)
+        except Exception:
+            days_to_exp = 180
+            T_years = 0.5
+        net_delta = round(
+            sum(float(i.position) * 0.52  for i in calls) +
+            sum(float(i.position) * -0.52 for i in puts),
+            2,
+        )
+        vega_per_contract = strike * 0.3989 * _math.sqrt(T_years) / 100  # per 1%
+        net_vega = round(vega_per_contract * sum(abs(float(i.position)) for i in legs), 0)
+
+        strategy_type = "STRADDLE" if (calls and puts) else ("CALL" if calls else "PUT")
+
         result.append({
             "strategy_id":          f"strat_{counter:03d}",
             "strategy_name":        strategy_name,
             "strategy_label":       "LIVE_IBKR",
+            "strategy_type":        strategy_type,
+            "status":               "OPEN",
             "target_strike":        target_strike,
             "expiry":               f"({expiry_label})",
+            "days_to_expiry":       days_to_exp,
             "open_interest":        int(sum(abs(float(i.position)) for i in legs)),
             "allocated_margin_eur": round(mkt_value),
             "allocated_margin_pct": round(mkt_value / _NAV_TOTAL * 100, 1),
             "pnl_intraday_eur":     round(unrealized),
             "live_exec":            True,
             "legs":                 leg_labels,
+            "total_delta":          net_delta,
+            "total_vega":           net_vega,
         })
         counter += 1
 
@@ -215,18 +346,29 @@ def _positions_from_ibkr(adapter) -> list[dict]:
         c = item.contract
         unrealized = float(item.unrealizedPNL) if not _nan(item.unrealizedPNL) else 0.0
         mkt_value  = abs(float(item.marketValue)) if not _nan(item.marketValue) else 0.0
+        exp_raw = c.lastTradeDateOrContractMonth or ""
+        try:
+            exp_date_other = datetime.strptime(exp_raw[:8], "%Y%m%d")
+            days_other = max(0, (exp_date_other.date() - datetime.now().date()).days)
+        except Exception:
+            days_other = 0
         result.append({
             "strategy_id":          f"strat_{counter:03d}",
             "strategy_name":        f"{c.symbol} {c.secType}",
             "strategy_label":       "LIVE_IBKR",
-            "target_strike":        "N/A",
-            "expiry":               c.lastTradeDateOrContractMonth or "N/A",
+            "strategy_type":        "STRADDLE",
+            "status":               "OPEN",
+            "target_strike":        c.symbol,
+            "expiry":               exp_raw or "N/A",
+            "days_to_expiry":       days_other,
             "open_interest":        int(abs(float(item.position))),
             "allocated_margin_eur": round(mkt_value),
             "allocated_margin_pct": round(mkt_value / _NAV_TOTAL * 100, 1),
             "pnl_intraday_eur":     round(unrealized),
             "live_exec":            True,
             "legs":                 [f"{c.symbol} {c.secType}"],
+            "total_delta":          round(float(item.position), 2),
+            "total_vega":           None,
         })
         counter += 1
 

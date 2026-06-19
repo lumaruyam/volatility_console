@@ -40,7 +40,7 @@ const SEED: Order[] = [
   { order_id: "ord_a1b2c3d4e5f60009", status: "staged",    side: "SELL", qty: 15,  underlying: "TTE",   expiry: "20261218", strike: 60,   right: "P", order_type: "LMT", limit_price: 11.05,  filled_qty: 0 },
   { order_id: "ord_a1b2c3d4e5f60010", status: "rejected",  side: "SELL", qty: 80,  underlying: "SX5E",  expiry: "20260717", strike: 4600, right: "C", order_type: "LMT", limit_price: 28.60,  filled_qty: 0, reason: "Price outside NBBO tolerance band" },
   { order_id: "ord_a1b2c3d4e5f60011", status: "filled",    side: "BUY",  qty: 45,  underlying: "SIE",   expiry: "20260918", strike: 270,  right: "C", order_type: "MKT", filled_qty: 45, fill_price: 6.18 },
-  { order_id: "ord_a1b2c3d4e5f60012", status: "partial",   side: "SELL", qty: 120, underlying: "OR.PA", expiry: "20261120", strike: 220,  right: "P", order_type: "LMT", limit_price: 18.40,  filled_qty: 70,  fill_price: 18.38 },
+  { order_id: "ord_a1b2c3d4e5f60012", status: "partial",   side: "SELL", qty: 120, underlying: "OR.PA", expiry: "20261120", strike: 220,  right: "P", order_type: "LMT", limit_price: 18.40,  filled_qty: 70,  fill_price: 18.42 },
 ];
 
 // ---------------------------------------------------------------------------
@@ -111,6 +111,20 @@ export function Orders() {
     return () => clearInterval(id);
   }, [dataUpdatedAt]);
 
+  // ── Dev-mode OMS sanity assertions ───────────────────────────────────────
+  if (process.env.NODE_ENV === "development") {
+    orders.forEach(o => {
+      if (o.order_type === "LMT" && o.fill_price != null && o.limit_price != null) {
+        if (o.side === "SELL" && o.fill_price < o.limit_price) {
+          console.warn(`[OMS] SELL fill below limit: ${o.order_id} fill=${o.fill_price} < limit=${o.limit_price}`);
+        }
+        if (o.side === "BUY" && o.fill_price > o.limit_price) {
+          console.warn(`[OMS] BUY fill above limit: ${o.order_id} fill=${o.fill_price} > limit=${o.limit_price}`);
+        }
+      }
+    });
+  }
+
   // ── Derived ───────────────────────────────────────────────────────────────
   const kpis = useMemo(() => ({
     total:    orders.length,
@@ -169,7 +183,7 @@ export function Orders() {
         <KpiTile label="STAGED"       value={kpis.staged}   tone="muted"   />
         <KpiTile label="WORKING"      value={kpis.working}  tone="blue"    />
         <KpiTile label="FILLED"       value={kpis.filled}   tone="emerald" />
-        <KpiTile label="REJECTED"     value={kpis.rejected} tone="red"     />
+        <KpiTile label="REJ / CNCL"   value={kpis.rejected} tone="red"     />
       </div>
 
       {/* ── Filter bar ────────────────────────────────────────────────────── */}
