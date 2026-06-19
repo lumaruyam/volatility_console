@@ -2,14 +2,16 @@ import { useMemo, useState } from "react";
 import {
   Database, ShieldAlert, ArrowLeftRight, History, SlidersHorizontal,
   Terminal as TerminalIcon, HelpCircle, Settings, Bell, Search, CheckCircle2, Gauge,
+  ClipboardList,
 } from "lucide-react";
 import { DataOverview } from "./views/DataOverview";
 import { RiskAnalysis } from "./views/RiskAnalysis";
 import { StrategyExecution } from "./views/StrategyExecution";
 import { Backtesting } from "./views/Backtesting";
 import { ShockSimulator } from "./views/ShockSimulator";
+import { Orders } from "./views/Orders";
 
-export type ViewKey = "data" | "risk" | "strategy" | "backtest" | "shock";
+export type ViewKey = "data" | "risk" | "strategy" | "backtest" | "shock" | "orders";
 
 const NAV: { key: ViewKey; label: string; short: string; Icon: typeof Database }[] = [
   { key: "data",     label: "Data Overview",      short: "DATA",  Icon: Database },
@@ -17,6 +19,7 @@ const NAV: { key: ViewKey; label: string; short: string; Icon: typeof Database }
   { key: "strategy", label: "Strategy Execution", short: "EXEC",  Icon: ArrowLeftRight },
   { key: "backtest", label: "Backtesting",        short: "BACK",  Icon: History },
   { key: "shock",    label: "Shock Simulator",    short: "SHOCK", Icon: SlidersHorizontal },
+  { key: "orders",   label: "Orders",             short: "OMS",   Icon: ClipboardList },
 ];
 
 export function TerminalShell() {
@@ -29,6 +32,7 @@ export function TerminalShell() {
       case "strategy": return <StrategyExecution />;
       case "backtest": return <Backtesting />;
       case "shock":    return <ShockSimulator />;
+      case "orders":   return <Orders />;
     }
   }, [view]);
 
@@ -47,15 +51,7 @@ export function TerminalShell() {
           <span className="font-mono text-[11px] text-emerald-300 tracking-wider">REPLAY FRAME: 2026-06-14 16:30:00 UTC</span>
         </div>
 
-        <nav className="hidden lg:flex items-center gap-1 ml-auto">
-          {["GLOBAL", "REGIME_α", "LIQUIDITY", "VOL_CORE"].map((t) => (
-            <button key={t} className="px-2.5 py-1 font-mono text-[11px] text-zinc-400 hover:text-[#adc6ff] hover:bg-zinc-900 tracking-wider">
-              {t}
-            </button>
-          ))}
-        </nav>
-
-        <div className="ml-auto lg:ml-0 relative hidden md:block">
+        <div className="ml-auto relative hidden md:block">
           <Search className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-zinc-600" />
           <input
             placeholder="CMD / SEARCH..."

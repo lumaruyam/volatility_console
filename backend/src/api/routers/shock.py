@@ -31,12 +31,60 @@ _METHODOLOGY_SLUGS = {
 }
 
 
+class LiquidityImpactRequest(BaseModel):
+    spot: float = 0.0   # spot shock %
+    vol: float  = 0.0   # vol shock pts
+    portfolio: str = "SX5E_STRADDLE"
+
+
 class RepriceRequest(BaseModel):
     spot_stress: float = 0.0          # manual offset, fraction (−0.05 = −5%)
     vol_stress: float = 0.0           # manual offset, fraction (0.20 = +20%)
     rate_stress_bps: float = 0.0      # manual offset, bps
     methodology: str = "parallel_grid_shift"
     active_methods: int = 1           # count of active methodology toggles
+
+
+@router.get("/surface-before-after")
+def surface_before_after(
+    spot: float = 0.0,
+    vol: float  = 0.0,
+    portfolio: str = "SX5E_STRADDLE",
+) -> dict:
+    """ATM vol term structure before and after a combined spot/vol shock."""
+    maturities   = ["1M", "3M", "6M", "12M", "18M", "24M"]
+    base_atm_vol = [0.152, 0.162, 0.170, 0.178, 0.185, 0.190]
+    vol_shift    = vol * 0.01   # vol shock is in vol pts (e.g. 10 → +0.10)
+    # Spot shock steepens the skew slightly (−5% spot → +1.5% ATM vol)
+    spot_atm_adj = -spot * 0.003
+
+    after = [round(v + vol_shift + spot_atm_adj, 4) for v in base_atm_vol]
+    return {
+        "maturities":    maturities,
+        "atm_vol_before": base_atm_vol,
+        "atm_vol_after":  after,
+    }
+
+
+@router.post("/liquidity-impact")
+def liquidity_impact(body: LiquidityImpactRequest) -> list[dict]:
+    """Estimated bid-ask spread widening and volume impact under a shock scenario."""
+    abs_shock = abs(body.spot) + abs(body.vol) * 0.5
+    multiplier = 1.0 + abs_shock * 0.06   # 6% spread widening per unit of combined shock
+
+    rows = [
+        {"contract": "SX5E 4000P DEC26", "pre_spread_pct": 2.1,  "volume_impact_pct": -42},
+        {"contract": "ASML 900C SEP26",  "pre_spread_pct": 5.9,  "volume_impact_pct": -61},
+        {"contract": "SX5E 4400C DEC26", "pre_spread_pct": 1.8,  "volume_impact_pct": -35},
+        {"contract": "MC.PA 500P SEP26", "pre_spread_pct": 8.2,  "volume_impact_pct": -74},
+        {"contract": "SX5E 3800P MAR27", "pre_spread_pct": 3.4,  "volume_impact_pct": -48},
+    ]
+    for row in rows:
+        row["post_spread_pct"] = round(row["pre_spread_pct"] * multiplier, 2)
+        row["volume_impact_pct"] = round(
+            row["volume_impact_pct"] * (1.0 + abs_shock * 0.02), 1
+        )
+    return rows
 
 
 @router.post("/reprice")

@@ -29,6 +29,7 @@ build/
 # =============================================================================
 .env
 .env.*
+!backend/.env.school   # safe to commit — no secrets, only sets IBKR_ENABLED=0
 *.pem
 *.key
 secrets.yaml

@@ -7,6 +7,7 @@ ib_insync>=0.9.86          # IBKR async adapter
 pydantic>=2.8.0
 pydantic-settings>=2.5.0
 PyYAML>=6.0.1
+python-dotenv>=1.0.0        # .env file support (load .env.school at school)
 
 # Logging
 structlog>=24.4.0

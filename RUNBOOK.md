@@ -287,21 +287,41 @@ pytest tests/test_api/ --cov=src/api --cov-report=term-missing
 
 ## Environment Variables
 
-The backend uses no required environment variables in demo mode — all data falls back to synthetic values. For live trading these should be set:
+No environment variables are required — all data falls back to synthetic values in demo mode.
 
-| Variable | Purpose | Example |
+| Variable | Default | Purpose |
 |----------|---------|---------|
-| `IBKR_HOST` | TWS/IB Gateway host | `127.0.0.1` |
-| `IBKR_PORT` | TWS/IB Gateway port (paper: 7497, live: 7496) | `7497` |
-| `IBKR_CLIENT_ID` | Unique client ID | `1` |
-| `LOG_LEVEL` | Python logging level | `INFO` |
+| `IBKR_ENABLED` | `1` | Set to `0` to skip IBKR entirely (school / offline use) |
+| `IBKR_CONNECT_TIMEOUT` | `5` | Seconds to wait for IBKR handshake before giving up |
+| `IBKR_HOST` | `127.0.0.1` | TWS / IB Gateway host |
+| `IBKR_PORT` | `7497` | TWS / IB Gateway port (paper: 7497, live: 7496) |
+| `IBKR_CLIENT_ID` | `1` | Unique client ID per connection |
+| `LOG_LEVEL` | `INFO` | Python logging level |
 
-Create a `.env` file in `backend/` (never commit it):
+Create a `backend/.env` file (it is auto-loaded on startup, never commit it):
 ```bash
 IBKR_HOST=127.0.0.1
 IBKR_PORT=7497
 IBKR_CLIENT_ID=1
 LOG_LEVEL=INFO
+```
+
+### School / Offline Mode
+
+The school network blocks port 7497. Use the provided `.env.school` preset:
+
+```bash
+cd backend
+cp .env.school .env        # sets IBKR_ENABLED=0 — startup is instant
+uvicorn src.api.main:app --reload --port 8000
+```
+
+Data falls back automatically: **yfinance** (HTTPS/443, works at school) → **disk cache** (Parquet files, works offline). To populate the disk cache before going to school:
+
+```bash
+cd backend
+source .venv/bin/activate
+python scripts/seed_cache.py   # ~2 min, downloads 56 tickers to data/cache/ohlcv/
 ```
 
 ---

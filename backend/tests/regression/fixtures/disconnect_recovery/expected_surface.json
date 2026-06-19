@@ -1,0 +1,27 @@
+{
+  "description": "kill-and-restart: two event files with 600s gap; merged snapshot must use latest quotes",
+  "n_slices": 2,
+  "underlying_spot": 4950.0,
+  "gap_seconds": 600,
+  "n_events_part1": 156,
+  "n_events_part2": 156,
+  "slices": [
+    {
+      "expiry": "2025-06-20",
+      "atm_vol_min": 0.17,
+      "atm_vol_max": 0.24,
+      "rmse_max": 0.008,
+      "is_fallback": false,
+      "n_points_min": 6
+    },
+    {
+      "expiry": "2025-12-19",
+      "atm_vol_min": 0.17,
+      "atm_vol_max": 0.24,
+      "rmse_max": 0.008,
+      "is_fallback": false,
+      "n_points_min": 6
+    }
+  ],
+  "n_iv_converged_min": 10
+}

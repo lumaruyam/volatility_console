@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import logging
 
+from typing import Optional
+
 from fastapi import APIRouter
 
 from src.risk.var import compute_historical_var
@@ -121,6 +123,83 @@ def uam() -> dict:
         "uam_pct":        round(uam_result.uam_ratio, 4),
         "worst_case_pnl": int(uam_result.worst_case_pnl),
         "portfolio_nav":  nav,
+    }
+
+
+@router.get("/reference-spot")
+def reference_spot(portfolio: str = "SX5E_STRADDLE") -> dict:
+    """Reference spot price for a portfolio's primary underlying."""
+    return {"spot": round(PORTFOLIO_SPOT, 2)}
+
+
+@router.get("/positions")
+def positions(portfolio: str = "SX5E_STRADDLE") -> list[dict]:
+    """Portfolio positions with mark-to-market and unrealised PnL."""
+    spot = PORTFOLIO_SPOT
+    return [
+        {"contract": f"SX5E 20261218 {int(spot * 0.95)}C", "qty": 100, "mkt_value": 125_000, "avg_cost": 1_180, "unrealised_pnl":  7_000},
+        {"contract": f"SX5E 20261218 {int(spot * 0.95)}P", "qty": 100, "mkt_value": 118_000, "avg_cost": 1_250, "unrealised_pnl": -7_000},
+        {"contract": f"SX5E 20270618 {int(spot * 1.05)}C", "qty":  50, "mkt_value":  45_000, "avg_cost":   900, "unrealised_pnl":  2_500},
+        {"contract": f"SX5E 20270618 {int(spot * 0.90)}P", "qty":  50, "mkt_value":  52_000, "avg_cost":   980, "unrealised_pnl":  2_000},
+    ]
+
+
+@router.get("/aggregates")
+def aggregates(portfolio: str = "SX5E_STRADDLE") -> list[dict]:
+    """Risk aggregates by underlying, expiry, and total."""
+    return [
+        {"group": "SX5E",       "net_delta": 0.52, "net_vega":  8_504, "net_theta": -125, "dollar_delta": 2_340_000, "dollar_vega": 850_000, "mkt_val": 15_200_000, "n_positions": 4},
+        {"group": "2026-12-18", "net_delta": 0.31, "net_vega":  5_200, "net_theta":  -75, "dollar_delta": 1_395_000, "dollar_vega": 520_000, "mkt_val":  8_100_000, "n_positions": 2},
+        {"group": "2027-06-18", "net_delta": 0.21, "net_vega":  3_304, "net_theta":  -50, "dollar_delta":   945_000, "dollar_vega": 330_000, "mkt_val":  7_100_000, "n_positions": 2},
+        {"group": "TOTAL",      "net_delta": 0.52, "net_vega":  8_504, "net_theta": -125, "dollar_delta": 2_340_000, "dollar_vega": 850_000, "mkt_val": 15_200_000, "n_positions": 4},
+    ]
+
+
+@router.get("/liquidity")
+def liquidity(portfolio: str = "SX5E_STRADDLE") -> list[dict]:
+    """Top illiquid options by bid-ask spread for the portfolio."""
+    spot = PORTFOLIO_SPOT
+    return [
+        {"ticker": "SX5E", "expiry": "2026-12-18", "strike": int(spot * 0.75), "bid_ask_spread_pct": 8.2, "volume":  210},
+        {"ticker": "SX5E", "expiry": "2027-06-18", "strike": int(spot * 1.10), "bid_ask_spread_pct": 7.1, "volume":  145},
+        {"ticker": "SX5E", "expiry": "2026-12-18", "strike": int(spot * 0.70), "bid_ask_spread_pct": 6.5, "volume":   98},
+        {"ticker": "ASML", "expiry": "2026-12-18", "strike": 900,              "bid_ask_spread_pct": 5.8, "volume":   54},
+        {"ticker": "ASML", "expiry": "2026-12-18", "strike": 750,              "bid_ask_spread_pct": 5.3, "volume":   67},
+    ]
+
+
+@router.get("/basket-variance")
+def basket_variance(
+    weights: str = "0.09,0.06,0.05,0.05,0.04,0.04,0.04,0.04,0.04,0.03",
+    vols: str = "0.28,0.32,0.24,0.25,0.27,0.30,0.26,0.29,0.22,0.31",
+    avg_corr: Optional[float] = None,
+    index_atm_vol: Optional[float] = None,
+) -> dict:
+    """Basket variance identity (PDF Part II Eq. 23).
+
+    sigma2_basket = sum_ij w_i * w_j * sigma_i * sigma_j * rho_ij
+
+    Defaults are top-10 ESTX50 constituents with synthetic vols.
+    Pass comma-separated weights/vols to override; optionally supply avg_corr
+    and index_atm_vol to compute the dispersion premium residual.
+    """
+    from src.analytics.basket_variance import compute_basket_variance
+
+    w = [float(x) for x in weights.split(",") if x.strip()]
+    v = [float(x) for x in vols.split(",") if x.strip()]
+    result = compute_basket_variance(
+        weights=w,
+        vols=v,
+        avg_corr=avg_corr,
+        index_atm_vol=index_atm_vol,
+    )
+    return {
+        "basket_variance": round(result.basket_variance, 6),
+        "basket_vol": round(result.basket_vol, 6),
+        "weighted_component_vars": [round(x, 6) for x in result.weighted_component_vars],
+        "residual_vs_atm": round(result.residual_vs_atm, 6),
+        "avg_corr_used": round(result.avg_corr_used, 4),
+        "n_constituents": result.n_constituents,
     }
 
 

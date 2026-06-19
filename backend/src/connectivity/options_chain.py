@@ -114,25 +114,38 @@ def fetch_options_chain(
         half_spread = 0.005
         is_atm = abs(K / spot - 1.0) < 0.015
 
+        # Synthetic volume / OI — Gaussian decay away from ATM, seeded by strike
+        import random as _rnd
+        _rng = _rnd.Random(int(K * 100) ^ 0xABCD)
+        _vol_weight = math.exp(-3.0 * k ** 2)          # 1.0 at ATM, decays with moneyness
+        call_volume = max(10, int(2_200 * _vol_weight * _rng.uniform(0.6, 1.4)))
+        put_volume  = max(10, int(1_800 * _vol_weight * _rng.uniform(0.6, 1.4)))
+        call_oi     = max(50, int(call_volume * _rng.uniform(3.0, 6.0)))
+        put_oi      = max(50, int(put_volume  * _rng.uniform(3.0, 6.0)))
+
         rows.append({
-            "strike":      K,
-            "call_bid":    round(c.price * (1 - half_spread), 2),
-            "call_ask":    round(c.price * (1 + half_spread), 2),
-            "call_iv":     round(call_iv * 100, 2),
-            "call_delta":  round(c.delta, 4),
-            "call_gamma":  round(c.gamma, 6),
-            "call_vega":   round(c.vega, 2),
-            "call_theta":  round(c.theta, 2),
-            "call_qc":     call_qc,
-            "put_bid":     round(p.price * (1 - half_spread), 2),
-            "put_ask":     round(p.price * (1 + half_spread), 2),
-            "put_iv":      round(put_iv * 100, 2),
-            "put_delta":   round(p.delta, 4),
-            "put_gamma":   round(p.gamma, 6),
-            "put_vega":    round(p.vega, 2),
-            "put_theta":   round(p.theta, 2),
-            "put_qc":      put_qc,
-            "atm":         is_atm,
+            "strike":       K,
+            "call_bid":     round(c.price * (1 - half_spread), 2),
+            "call_ask":     round(c.price * (1 + half_spread), 2),
+            "call_iv":      round(call_iv * 100, 2),
+            "call_delta":   round(c.delta, 4),
+            "call_gamma":   round(c.gamma, 6),
+            "call_vega":    round(c.vega, 2),
+            "call_theta":   round(c.theta, 2),
+            "call_volume":  call_volume,
+            "call_oi":      call_oi,
+            "call_qc":      call_qc,
+            "put_bid":      round(p.price * (1 - half_spread), 2),
+            "put_ask":      round(p.price * (1 + half_spread), 2),
+            "put_iv":       round(put_iv * 100, 2),
+            "put_delta":    round(p.delta, 4),
+            "put_gamma":    round(p.gamma, 6),
+            "put_vega":     round(p.vega, 2),
+            "put_theta":    round(p.theta, 2),
+            "put_volume":   put_volume,
+            "put_oi":       put_oi,
+            "put_qc":       put_qc,
+            "atm":          is_atm,
         })
 
     return rows

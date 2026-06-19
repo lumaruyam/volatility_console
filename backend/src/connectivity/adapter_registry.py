@@ -38,13 +38,20 @@ def set_adapter(adapter) -> None:
 def build_adapter_from_env() -> Optional[object]:
     """
     Instantiate IbkrAdapter from environment variables.
-    Returns None if ib_insync is not installed (graceful degradation).
+    Returns None if ib_insync is not installed or IBKR is explicitly disabled.
 
     Environment variables:
-        IBKR_HOST        default 127.0.0.1
-        IBKR_PORT        default 7497  (paper: 7497, live: 7496)
-        IBKR_CLIENT_ID   default 1
+        IBKR_HOST              default 127.0.0.1
+        IBKR_PORT              default 7497  (paper: 7497, live: 7496)
+        IBKR_CLIENT_ID         default 1
+        IBKR_ENABLED           set to 0/false/no to skip IBKR entirely
+                               (school use: avoids 15-second port-blocked hang)
+        IBKR_CONNECT_TIMEOUT   connect timeout in seconds, default 5
     """
+    if os.getenv("IBKR_ENABLED", "1").lower() in ("0", "false", "no"):
+        log.info("adapter_registry: IBKR disabled via IBKR_ENABLED — yfinance fallback active")
+        return None
+
     try:
         from src.connectivity.ibkr_adapter import IbkrAdapter
     except ImportError:
@@ -54,10 +61,11 @@ def build_adapter_from_env() -> Optional[object]:
     host      = os.getenv("IBKR_HOST",      "127.0.0.1")
     port      = int(os.getenv("IBKR_PORT",  "7497"))
     client_id = int(os.getenv("IBKR_CLIENT_ID", "1"))
+    timeout   = float(os.getenv("IBKR_CONNECT_TIMEOUT", "5"))
 
     log.info(
-        "adapter_registry: building IbkrAdapter host=%s port=%s client_id=%s",
-        host, port, client_id,
+        "adapter_registry: building IbkrAdapter host=%s port=%s client_id=%s timeout=%.1fs",
+        host, port, client_id, timeout,
     )
     return IbkrAdapter(
         host=host,
@@ -65,6 +73,7 @@ def build_adapter_from_env() -> Optional[object]:
         client_id=client_id,
         read_only=False,    # need write for paper-trade order submission
         delayed_data=True,  # paper accounts use delayed data by default
+        connect_timeout_s=timeout,
     )
 
 

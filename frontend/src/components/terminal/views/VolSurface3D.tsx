@@ -270,7 +270,7 @@ function niceIVTicks(vMin: number, vMax: number): number[] {
   return ticks;
 }
 
-// ─── 3D axis labels — Billboard so text always faces the active camera ────────
+// ─── 3D axis labels — Billboard (lockX keeps text upright at all camera angles) ─
 
 function AxisLabels({
   strikes,
@@ -300,15 +300,16 @@ function AxisLabels({
     const pts: number[] = [];
     strikeIdxs.forEach(si => {
       const x = ((strikes[si] - sMin) / sRange) * 2 - 1;
-      pts.push(x, 0, 1.0,  x, -0.06, 1.0);         // drop below floor on front edge
+      pts.push(x, 0, 1.0,  x, -0.06, 1.0);
     });
     maturityIdxs.forEach(mi => {
       const z = nM > 1 ? (mi / (nM - 1)) * 2 - 1 : 0;
-      pts.push(-1.0, 0, z,  -1.08, 0, z);           // extend left on left edge
+      pts.push(-1.0, 0, z,  -1.10, 0, z);
     });
     ivTicks.forEach(v => {
       const y = ((v - vMin) / vRange) * 0.8;
-      pts.push(-1.0, y, -1.0,  -1.08, y, -1.0);     // extend left on back-left vertical
+      // Extend further left so tick bridges from axis edge to the pushed-out labels
+      pts.push(-1.0, y, -1.0,  -1.15, y, -1.0);
     });
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
@@ -317,8 +318,13 @@ function AxisLabels({
 
   useEffect(() => () => tickGeo.dispose(), [tickGeo]);
 
-  const TICK_FS  = 0.09;   // slightly smaller to prevent crowding
-  const TITLE_FS = 0.11;
+  const TICK_FS  = 0.088;
+  const TITLE_FS = 0.108;
+  // lockX={true} keeps every label upright — prevents the 180° vertical flip
+  // when the camera crosses the horizontal plane during orbit.
+  // outlineWidth/Color punches a dark halo so text stays legible over the mesh.
+  const OW = 0.012;   // outline width
+  const OC = "#09090b"; // outline colour
 
   return (
     <group>
@@ -331,15 +337,17 @@ function AxisLabels({
       {strikeIdxs.map(si => {
         const x = ((strikes[si] - sMin) / sRange) * 2 - 1;
         return (
-          <Billboard key={`sk${si}`} position={[x, -0.20, 1.16]}>
-            <Text fontSize={TICK_FS} color="#e4e4e7" anchorX="center" anchorY="middle">
+          <Billboard key={`sk${si}`} position={[x, -0.20, 1.16]} lockX={true}>
+            <Text fontSize={TICK_FS} color="#e4e4e7" anchorX="center" anchorY="middle"
+                  outlineWidth={OW} outlineColor={OC}>
               {strikes[si] >= 100 ? strikes[si].toFixed(0) : strikes[si].toFixed(2)}
             </Text>
           </Billboard>
         );
       })}
-      <Billboard position={[0, -0.33, 1.16]}>
-        <Text fontSize={TITLE_FS} color="#ffffff" anchorX="center" anchorY="middle" letterSpacing={0.06}>
+      <Billboard position={[0, -0.34, 1.16]} lockX={true}>
+        <Text fontSize={TITLE_FS} color="#ffffff" anchorX="center" anchorY="middle"
+              letterSpacing={0.06} outlineWidth={OW} outlineColor={OC}>
           STRIKE
         </Text>
       </Billboard>
@@ -348,32 +356,39 @@ function AxisLabels({
       {maturityIdxs.map(mi => {
         const z = nM > 1 ? (mi / (nM - 1)) * 2 - 1 : 0;
         return (
-          <Billboard key={`mt${mi}`} position={[-1.24, -0.20, z]}>
-            <Text fontSize={TICK_FS} color="#e4e4e7" anchorX="center" anchorY="middle">
+          <Billboard key={`mt${mi}`} position={[-1.26, -0.20, z]} lockX={true}>
+            <Text fontSize={TICK_FS} color="#e4e4e7" anchorX="center" anchorY="middle"
+                  outlineWidth={OW} outlineColor={OC}>
               {maturities[mi]}
             </Text>
           </Billboard>
         );
       })}
-      <Billboard position={[-1.24, -0.33, 0]}>
-        <Text fontSize={TITLE_FS} color="#ffffff" anchorX="center" anchorY="middle" letterSpacing={0.06}>
+      <Billboard position={[-1.26, -0.34, 0]} lockX={true}>
+        <Text fontSize={TITLE_FS} color="#ffffff" anchorX="center" anchorY="middle"
+              letterSpacing={0.06} outlineWidth={OW} outlineColor={OC}>
           MATURITY
         </Text>
       </Billboard>
 
-      {/* ── Y axis: IV% labels — outside back-left vertical edge ── */}
+      {/* ── Y axis: IV% labels ──
+           Pushed to x=-1.50 (clear of maturity labels at x=-1.26) and z=-1.0
+           (on the back-edge plane, not buried behind z=-1.16).
+           +0.02 y-lift stops the vMin tick from sitting on the floor grid line. */}
       {ivTicks.map(v => {
         const y = ((v - vMin) / vRange) * 0.8;
         return (
-          <Billboard key={`iv${v}`} position={[-1.24, y, -1.16]}>
-            <Text fontSize={TICK_FS} color="#e4e4e7" anchorX="center" anchorY="middle">
+          <Billboard key={`iv${v}`} position={[-1.50, y + 0.02, -1.0]} lockX={true}>
+            <Text fontSize={TICK_FS} color="#e4e4e7" anchorX="center" anchorY="middle"
+                  outlineWidth={OW} outlineColor={OC}>
               {(v * 100).toFixed(0)}%
             </Text>
           </Billboard>
         );
       })}
-      <Billboard position={[-1.24, 0.96, -1.16]}>
-        <Text fontSize={TITLE_FS} color="#ffffff" anchorX="center" anchorY="middle" letterSpacing={0.06}>
+      <Billboard position={[-1.50, 0.98, -1.0]} lockX={true}>
+        <Text fontSize={TITLE_FS} color="#ffffff" anchorX="center" anchorY="middle"
+              letterSpacing={0.06} outlineWidth={OW} outlineColor={OC}>
           IV %
         </Text>
       </Billboard>

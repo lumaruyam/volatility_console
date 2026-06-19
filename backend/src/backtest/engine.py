@@ -184,11 +184,31 @@ def _compute_pnl_series(dates: list[str], closes: np.ndarray, strategy_id: str) 
     step = max(1, n // 500)
     idx  = list(range(0, n, step))
 
+    # Greeks over time — simplified straddle model:
+    # delta drifts with cumulative spot move; gamma/vega decay with time; theta grows
+    t_frac     = np.linspace(0, 1, n)                          # time in [0,1]
+    delta_path = 0.02 + np.cumsum(log_rets) * 0.30             # delta drifts with spot
+    gamma_path = 385_200 * (1 - 0.5 * t_frac)                  # gamma decays to expiry
+    vega_path  = 850_400 * (1 - 0.6 * t_frac)                  # vega decays faster
+    theta_path = -12_500 * (1 + 0.8 * t_frac)                  # theta accelerates
+
+    greeks_over_time = [
+        {
+            "date":  dates[i],
+            "delta": round(float(delta_path[i]), 4),
+            "gamma": round(float(gamma_path[i]), 0),
+            "vega":  round(float(vega_path[i]),  0),
+            "theta": round(float(theta_path[i]), 0),
+        }
+        for i in idx
+    ]
+
     return {
         "timestamp_vector":      [dates[i] for i in idx],
         "cumulative_pnl_vector": [round(float(cumul_strat[i] * 100), 3) for i in idx],
         "benchmark_pnl_vector":  [round(float(benchmark[i]   * 100), 3) for i in idx],
         "drawdown_vector":       [round(float(drawdown[i]     * 100), 3) for i in idx],
+        "greeks_over_time":      greeks_over_time,
         "stats": {
             "cumulative_pnl_ann_pct": round(ann_ret_pct, 2),
             "vs_benchmark_pct":       round(vs_bm_pct,   2),
@@ -216,13 +236,7 @@ def _filter_shock_window(
     return flt_dates, flt_arr
 
 
-def shock_date_range(preset: str) -> tuple[str, str]:
-    return {
-        "2008 Crash":           ("2008-09-01", "2009-03-31"),
-        "2020 Liquidity Shock": ("2020-02-01", "2020-04-30"),
-        "BREXIT":               ("2016-06-01", "2016-09-30"),
-        "COVID Vol Spike":      ("2020-03-01", "2020-05-31"),
-    }.get(preset, ("2020-02-01", "2020-04-30"))
+from src.backtest.shock_presets import shock_date_range  # noqa: E402,F401
 
 
 def _empty_result() -> dict:

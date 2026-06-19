@@ -181,7 +181,7 @@ def check_parity_residual_population(
     """Run check_parity_residual over a population of residuals in one call.
 
     Computes robust z-scores from the residual distribution, then applies
-    check_parity_residual per element. Returns one QCCheckResult per residual.
+    check_parity_residual per element. Returns one QCCheckResult per element.
 
     When len(residuals) < 2, z-scores default to 0 (single sample — not comparable).
     """
@@ -197,3 +197,12 @@ def check_parity_residual_population(
         ctx = {"instrument_key": key, "raw_residual": r}
         results.append(check_parity_residual(z, config, context=ctx))
     return results
+
+
+# ---------------------------------------------------------------------------
+# Re-export facade — PDF Part XII names checks.py as the single import point
+# for all QC functions; logic lives in quote_filter.py and validation.py.
+# ---------------------------------------------------------------------------
+
+from src.qc.quote_filter import run_quote_qc, filter_chain          # noqa: E402,F401
+from src.qc.validation import run_daily_qc, DailyQCReport, build_triage_table  # noqa: E402,F401

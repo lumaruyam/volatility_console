@@ -59,10 +59,10 @@ def _has_section(content: str, heading: str) -> bool:
 # ===========================================================================
 
 class TestRunbooksExists:
-    PATH = ROOT / "RUNBOOKS.md"
+    PATH = DOCS / "operating_runbooks.md"
 
     def test_file_exists(self):
-        assert self.PATH.exists(), "RUNBOOKS.md not found"
+        assert self.PATH.exists(), "docs/operating_runbooks.md not found"
 
     def test_start_of_day_section(self):
         content = _read(self.PATH)
@@ -230,10 +230,10 @@ class TestReleaseChecklist:
 # ===========================================================================
 
 class TestLimitationsDoc:
-    PATH = DOCS / "limitations.md"
+    PATH = DOCS / "known_limitations.md"
 
     def test_file_exists(self):
-        assert self.PATH.exists(), "docs/limitations.md not found"
+        assert self.PATH.exists(), "docs/known_limitations.md not found"
 
     def test_yahoo_finance_limitation(self):
         content = _read(self.PATH)
@@ -456,11 +456,11 @@ class TestAcceptanceCriterion:
 
     def test_all_required_docs_exist(self):
         required = [
-            ROOT / "RUNBOOKS.md",
+            DOCS / "operating_runbooks.md",
             DOCS / "schemas.md",
             DOCS / "architecture_overview.md",
             DOCS / "environment.md",
-            DOCS / "limitations.md",
+            DOCS / "known_limitations.md",
             ROOT / "release_checklist.md",
         ]
         for path in required:

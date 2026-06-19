@@ -9,12 +9,24 @@ and fall back to yfinance automatically when IBKR is unavailable.
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routers import market, risk, strategy, backtest, shock
+from src.api.routers import market, risk, strategy, backtest, shock, orders
+
+# Load .env from backend root (if present). Lets you drop .env.school → .env at school.
+try:
+    from dotenv import load_dotenv
+    _env_path = Path(__file__).resolve().parents[2] / ".env"
+    if _env_path.exists():
+        load_dotenv(_env_path, override=False)
+        logging.getLogger(__name__).info("startup: loaded env from %s", _env_path)
+except ImportError:
+    pass  # python-dotenv not installed — rely on shell environment
 
 log = logging.getLogger(__name__)
 
@@ -67,3 +79,4 @@ app.include_router(risk.router,     prefix="/api/risk")
 app.include_router(strategy.router, prefix="/api/strategy")
 app.include_router(backtest.router, prefix="/api/backtest")
 app.include_router(shock.router,    prefix="/api/shock")
+app.include_router(orders.router,   prefix="/api/orders")

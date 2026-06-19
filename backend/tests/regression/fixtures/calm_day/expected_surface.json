@@ -1,0 +1,24 @@
+{
+  "description": "calm ESTX50 day, full 6-strike chain, SVI converges",
+  "n_slices": 2,
+  "underlying_spot": 4950.0,
+  "slices": [
+    {
+      "expiry": "2025-06-20",
+      "atm_vol_min": 0.17,
+      "atm_vol_max": 0.24,
+      "rmse_max": 0.008,
+      "is_fallback": false,
+      "n_points_min": 6
+    },
+    {
+      "expiry": "2025-12-19",
+      "atm_vol_min": 0.17,
+      "atm_vol_max": 0.24,
+      "rmse_max": 0.008,
+      "is_fallback": false,
+      "n_points_min": 6
+    }
+  ],
+  "n_iv_converged_min": 10
+}
