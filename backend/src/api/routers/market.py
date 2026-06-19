@@ -242,6 +242,8 @@ def greeks_summary(ticker: str = "SX5E") -> dict:
 _MATURITY_YEARS = [10 / 365, 1 / 12, 3 / 12, 6 / 12, 1.0]
 _MATURITY_LABELS = ["10D", "1M", "3M", "6M", "12M"]
 _MONEYNESS = [0.80, 0.85, 0.90, 0.95, 1.00, 1.05, 1.10, 1.15, 1.20]
+_RFR = 0.045   # ECB deposit rate proxy  (matches /forward-curve endpoint)
+_DIV = 0.032   # SX5E dividend yield proxy
 
 
 def _build_vol_surface(spot: float, atm_vol: float) -> dict:
@@ -258,25 +260,30 @@ def _build_vol_surface(spot: float, atm_vol: float) -> dict:
     from src.surfaces.calibration import fit_surface
     from src.surfaces.models import IVPoint
 
+    # Fixed log-moneyness display grid (ln(K/spot) ≈ ln(K/F) for ATM; exact via k_fwd per slice)
+    k_grid  = [round(math.log(m), 6) for m in _MONEYNESS]
     strikes = [int(round(spot * m)) for m in _MONEYNESS]
-    k_grid = [math.log(m) for m in _MONEYNESS]
 
-    # Build synthetic IVPoints — inline SVI formula treated as market observations
+    # Build synthetic IVPoints — inline SVI formula treated as market observations.
+    # Forward is reconstructed per maturity: F(T) = spot × exp((r−q)×T).
     iv_points: list[IVPoint] = []
     for T, exp_label in zip(_MATURITY_YEARS, _MATURITY_LABELS):
+        F_T = spot * math.exp((_RFR - _DIV) * T)
         for ki, m in zip(k_grid, _MONEYNESS):
+            K     = float(int(round(spot * m)))
+            k_fwd = math.log(K / F_T)   # log-moneyness vs reconstructed forward
             term_premium = 0.02 * math.sqrt(T)
             skew = 0.12 * (-ki)
             curvature = 0.04 * ki ** 2
             iv = max(0.05, atm_vol + term_premium + skew + curvature)
             iv_points.append(IVPoint(
-                contract_key=f"SX5E_{exp_label}_{int(round(spot * m))}",
+                contract_key=f"SX5E_{exp_label}_{int(K)}",
                 snapshot_ts=time.time(),
                 expiry_str=exp_label,
                 maturity_years=T,
-                strike=float(int(round(spot * m))),
-                forward=spot,
-                log_moneyness=ki,
+                strike=K,
+                forward=F_T,
+                log_moneyness=k_fwd,
                 implied_vol=iv,
                 total_variance=iv ** 2 * T,
                 weight=1.0,
@@ -325,14 +332,23 @@ def _build_vol_surface(spot: float, atm_vol: float) -> dict:
         for T, exp_label in zip(_MATURITY_YEARS, _MATURITY_LABELS)
     ]
 
+    # Total variance grid: σ²T — the SVI canonical representation.
+    # Monotone in T for fixed k guarantees calendar-arbitrage freedom.
+    total_variances = [
+        [round(max(0.0, _fitted_iv(exp_label, ki, T) ** 2 * T), 6) for ki in k_grid]
+        for T, exp_label in zip(_MATURITY_YEARS, _MATURITY_LABELS)
+    ]
+
     # 30D smile slice with call / put separation
     call_ivs = [round(max(0.05, atm_vol + 0.08 * (-ki) + 0.03 * ki ** 2), 4) for ki in k_grid]
     put_ivs  = [round(max(0.05, atm_vol + 0.18 * (-ki) + 0.05 * ki ** 2), 4) for ki in k_grid]
 
     return {
-        "strikes":       strikes,
-        "maturities":    _MATURITY_LABELS,
-        "implied_vols":  implied_vols,
+        "log_moneyness":   k_grid,           # x-axis for 3D surface: ln(K/F)
+        "strikes":         strikes,           # absolute strikes (kept for smile chart)
+        "maturities":      _MATURITY_LABELS,
+        "total_variances": total_variances,   # height for 3D surface: σ²T
+        "implied_vols":    implied_vols,      # kept for ATM term-structure chart
         "smile_slice_30d": {
             "strikes":  strikes,
             "call_ivs": call_ivs,

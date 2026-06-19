@@ -7,7 +7,7 @@ import {
   ChevronUp, Filter,
 } from "lucide-react";
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
 import { Panel, StatusPill } from "../ui";
 
@@ -21,10 +21,10 @@ type IndexRow = { ticker: string; name: string; spot: number; atm_vol: number };
 type ChainRow = {
   strike: number;
   call_bid: number; call_ask: number; call_iv: number;
-  call_delta: number; call_gamma: number; call_vega: number; call_theta: number;
+  call_delta: number; call_gamma: number; call_vega: number; call_theta: number; call_rho?: number;
   call_volume?: number; call_oi?: number; call_qc: string;
   put_bid: number; put_ask: number; put_iv: number;
-  put_delta: number; put_gamma: number; put_vega: number; put_theta: number;
+  put_delta: number; put_gamma: number; put_vega: number; put_theta: number; put_rho?: number;
   put_volume?: number; put_oi?: number; put_qc: string;
   atm: boolean;
 };
@@ -36,9 +36,11 @@ type EngineStatus = {
   rate?: number;
 };
 type VolSurface = {
-  strikes: number[];
+  log_moneyness: number[];      // ln(K/F) grid — x-axis for 3D surface
+  strikes: number[];            // absolute strikes — kept for smile chart
   maturities: string[];
-  implied_vols: number[][];
+  total_variances: number[][];  // σ²T grid — height for 3D surface
+  implied_vols: number[][];     // raw IV — used for ATM term-structure chart
   smile_slice_30d: {
     strikes: number[];
     call_ivs: number[];
@@ -56,7 +58,7 @@ type GreeksSummary = {
   total_rho?: number;
 };
 type ExpiryOption = { value: string; label: string };
-type ForwardPoint = { expiry: string; forward: number; maturity_days: number };
+type ForwardPoint = { expiry: string; forward: number; maturity_days: number; carry_pct?: number; basis?: number };
 type SmileData = {
   strikes: number[];
   raw_iv: number[];
@@ -81,6 +83,27 @@ const FALLBACK_EXPIRIES: ExpiryOption[] = [
   { value: "2026-12-15", label: "2026-12-15 (30D)" },
   { value: "2027-01-19", label: "2027-01-19 (65D)" },
   { value: "2027-03-21", label: "2027-03-21 (120D)" },
+];
+
+// ---------------------------------------------------------------------------
+// Major global indices — static seed data (live feed overrides when backend healthy)
+// ---------------------------------------------------------------------------
+
+const INDICES_DATA: IndexRow[] = [
+  { ticker: "SX5E",  name: "Euro Stoxx 50",   spot: 4952.3,  atm_vol: 0.152 },
+  { ticker: "SPX",   name: "S&P 500",          spot: 5312.4,  atm_vol: 0.164 },
+  { ticker: "NDX",   name: "Nasdaq 100",       spot: 18742.1, atm_vol: 0.198 },
+  { ticker: "RUT",   name: "Russell 2000",     spot: 2082.5,  atm_vol: 0.221 },
+  { ticker: "DAX",   name: "DAX 40",           spot: 18248.5, atm_vol: 0.158 },
+  { ticker: "CAC",   name: "CAC 40",           spot: 7651.2,  atm_vol: 0.167 },
+  { ticker: "FTSE",  name: "FTSE 100",         spot: 8127.4,  atm_vol: 0.143 },
+  { ticker: "MIB",   name: "FTSE MIB",         spot: 33560.2, atm_vol: 0.182 },
+  { ticker: "IBEX",  name: "IBEX 35",          spot: 10823.6, atm_vol: 0.175 },
+  { ticker: "NKY",   name: "Nikkei 225",       spot: 38420.5, atm_vol: 0.192 },
+  { ticker: "HSI",   name: "Hang Seng",        spot: 17841.2, atm_vol: 0.247 },
+  { ticker: "SMI",   name: "Swiss SMI",        spot: 11922.4, atm_vol: 0.139 },
+  { ticker: "VIX",   name: "CBOE VIX",         spot: 18.24,   atm_vol: 0.820 },
+  { ticker: "V2TX",  name: "Euro Vol (V2TX)",  spot: 16.82,   atm_vol: 0.750 },
 ];
 
 const LOADING_INDEX: IndexRow[] = [
@@ -178,6 +201,7 @@ function exportChainCSV(chain: ChainRow[], ticker: string, expiry: string) {
 
 export function DataOverview() {
   const [selected, setSelected]         = useState("ASML");
+  const [sidebarMode, setSidebarMode]   = useState<"STOXX50" | "INDICES">("STOXX50");
   const [expiry, setExpiry]             = useState(FALLBACK_EXPIRIES[0].value);
   const [optionSide, setOptionSide]     = useState<"BOTH" | "CALLS" | "PUTS">("BOTH");
   const [strikeFilter, setStrikeFilter] = useState<"ALL" | "ATM10" | "DELTA30">("ALL");
@@ -362,6 +386,7 @@ export function DataOverview() {
   const heatmaxGamma = Math.max(...filteredChain.map(r => Math.abs(r.call_gamma)), 0.001);
   const heatmaxVega  = Math.max(...filteredChain.map(r => Math.abs(r.call_vega)),  0.001);
   const heatmaxTheta = Math.max(...filteredChain.map(r => Math.abs(r.call_theta)), 0.001);
+  const heatmaxRho   = Math.max(...filteredChain.map(r => Math.abs(r.call_rho ?? 0)), 0.001);
 
   return (
     <div className="flex h-full min-h-0 overflow-hidden">
@@ -370,8 +395,26 @@ export function DataOverview() {
         style={{ width: sidebarW }}
         className="shrink-0 bg-[#131315] flex flex-col overflow-hidden"
       >
-        <div className="h-8 shrink-0 flex items-center justify-between px-2.5 border-b border-zinc-800 bg-[#1c1b1d]">
-          <span className="text-[10px] font-bold tracking-[0.16em] uppercase text-zinc-200">EURO STOXX 50</span>
+        <div className="h-8 shrink-0 flex items-center justify-between px-2 border-b border-zinc-800 bg-[#1c1b1d]">
+          <div className="flex items-center gap-1">
+            {(["INDICES", "STOXX50"] as const).map(mode => (
+              <button
+                key={mode}
+                onClick={() => {
+                  setSidebarMode(mode);
+                  setSelected(mode === "INDICES" ? "SX5E" : "ASML");
+                }}
+                className={[
+                  "px-2 py-0.5 text-[9px] font-bold tracking-[0.12em] uppercase border transition-colors",
+                  sidebarMode === mode
+                    ? "border-[#adc6ff]/40 bg-[#adc6ff]/10 text-[#adc6ff]"
+                    : "border-transparent text-zinc-600 hover:text-zinc-400",
+                ].join(" ")}
+              >
+                {mode === "STOXX50" ? "SX50" : mode}
+              </button>
+            ))}
+          </div>
           <ChevronsUpDown className="w-3 h-3 text-zinc-500" />
         </div>
         <div className="overflow-y-auto flex-1 vc-scroll">
@@ -384,7 +427,7 @@ export function DataOverview() {
               </tr>
             </thead>
             <tbody className="font-mono text-[11px]">
-              {indexLoading
+              {sidebarMode === "STOXX50" && indexLoading
                 ? Array.from({ length: 12 }).map((_, i) => (
                     <tr key={i} className="border-b border-zinc-800/60">
                       <td className="px-2.5 py-1.5"><div className="animate-pulse bg-zinc-800 h-3 w-20 rounded" /></td>
@@ -392,7 +435,7 @@ export function DataOverview() {
                       <td className="px-2.5 py-1.5"><div className="animate-pulse bg-zinc-800 h-3 w-10 rounded ml-auto" /></td>
                     </tr>
                   ))
-                : indexData.map(r => {
+                : (sidebarMode === "INDICES" ? INDICES_DATA : indexData).map(r => {
                     const isSel  = selected === r.ticker;
                     const volPct = (r.atm_vol * 100).toFixed(1) + "%";
                     const vColor = r.atm_vol < 0.15
@@ -524,11 +567,11 @@ export function DataOverview() {
           <div className="grid grid-cols-12 gap-2.5 shrink-0" style={{ minHeight: 280 }}>
             <Panel
               className="col-span-8"
-              title="Vol Surface 3D — Strike / Maturity / IV%"
+              title="Vol Surface 3D — LN(K/F) / Maturity / σ²T"
               right={<>
-                <span className="text-zinc-600">x = STRIKE</span>
+                <span className="text-zinc-600">x = LN(K/F)</span>
                 <span className="pl-2 border-l border-zinc-800">z = MATURITY</span>
-                <span className="pl-2 border-l border-zinc-800">y = IV%</span>
+                <span className="pl-2 border-l border-zinc-800">y = σ²T</span>
               </>}
               padded={false}
             >
@@ -747,52 +790,57 @@ export function DataOverview() {
                     maxGamma={heatmaxGamma}
                     maxVega={heatmaxVega}
                     maxTheta={heatmaxTheta}
+                    maxRho={heatmaxRho}
                   />
                 ) : (
                   <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
-                  <table className="border-collapse text-right font-mono min-w-[1400px]">
+                  <table className="border-collapse text-right font-mono min-w-[1560px]">
                     <colgroup>
-                      {/* 10 call cols: Mid Sprd% IV% Δ Γ V Θ Vol OI QC */}
+                      {/* 11 call cols: Mid Sprd% IV% Δ Γ V Θ ρ Vol OI QC */}
                       {showCalls && <>
                         <col style={{ minWidth: 48 }} /><col style={{ minWidth: 44 }} />
                         <col style={{ minWidth: 44 }} /><col style={{ minWidth: 40 }} />
                         <col style={{ minWidth: 48 }} /><col style={{ minWidth: 38 }} />
-                        <col style={{ minWidth: 44 }} /><col style={{ minWidth: 48 }} />
-                        <col style={{ minWidth: 48 }} /><col style={{ minWidth: 32 }} />
+                        <col style={{ minWidth: 44 }} /><col style={{ minWidth: 40 }} />
+                        <col style={{ minWidth: 48 }} /><col style={{ minWidth: 48 }} />
+                        <col style={{ minWidth: 32 }} />
                       </>}
                       <col style={{ minWidth: 54 }} />{/* STRIKE */}
-                      {/* 10 put cols (mirror): QC OI Vol Θ V Γ Δ IV% Sprd% Mid */}
+                      {/* 11 put cols (mirror): QC OI Vol Θ ρ V Γ Δ IV% Sprd% Mid */}
                       {showPuts && <>
                         <col style={{ minWidth: 32 }} /><col style={{ minWidth: 48 }} />
                         <col style={{ minWidth: 48 }} /><col style={{ minWidth: 44 }} />
-                        <col style={{ minWidth: 38 }} /><col style={{ minWidth: 48 }} />
-                        <col style={{ minWidth: 40 }} /><col style={{ minWidth: 44 }} />
-                        <col style={{ minWidth: 44 }} /><col style={{ minWidth: 48 }} />
+                        <col style={{ minWidth: 40 }} /><col style={{ minWidth: 38 }} />
+                        <col style={{ minWidth: 48 }} /><col style={{ minWidth: 40 }} />
+                        <col style={{ minWidth: 44 }} /><col style={{ minWidth: 44 }} />
+                        <col style={{ minWidth: 48 }} />
                       </>}
                     </colgroup>
                     <thead className="sticky top-0 bg-[#1c1b1d] z-10">
                       <tr className="border-b border-zinc-800">
-                        {showCalls && <th colSpan={10} className="py-1 text-center text-[10px] font-bold tracking-[0.14em] text-zinc-500 uppercase border-r border-zinc-800">CALLS</th>}
+                        {showCalls && <th colSpan={11} className="py-1 text-center text-[10px] font-bold tracking-[0.14em] text-zinc-500 uppercase border-r border-zinc-800">CALLS</th>}
                         <th className="py-1 text-center text-[10px] font-bold tracking-[0.14em] text-zinc-200 uppercase border-r border-zinc-800 bg-[#0e0e10] sticky left-0 z-20">STRIKE</th>
-                        {showPuts && <th colSpan={10} className="py-1 text-center text-[10px] font-bold tracking-[0.14em] text-zinc-500 uppercase">PUTS</th>}
+                        {showPuts && <th colSpan={11} className="py-1 text-center text-[10px] font-bold tracking-[0.14em] text-zinc-500 uppercase">PUTS</th>}
                       </tr>
                       <tr className="border-b border-zinc-800 text-[10px] text-zinc-500">
-                        {showCalls && (["Mid","Sprd%","IV%","Δ","Γ","V","Θ","Vol","OI","QC"] as const).map((h, i) => (
+                        {showCalls && (["Mid","Sprd%","IV%","Δ","Γ","V","Θ","ρ","Vol","OI","QC"] as const).map((h, i) => (
                           <th key={"c"+i} className={[
                             "px-1.5 py-1 font-normal border-r border-zinc-800/60",
                             h === "IV%"   ? "text-[#adc6ff]" : "",
                             h === "Θ"    ? "text-[#ffb4ab]/70" : "",
+                            h === "ρ"    ? "text-[#adc6ff]/60" : "",
                             h === "Sprd%"? "text-yellow-500/70" : "",
                             h === "QC"   ? "text-center" : "",
                           ].join(" ")}>{h}</th>
                         ))}
                         <th className="px-2 py-1 font-bold text-zinc-200 bg-[#0e0e10] border-r border-zinc-800 text-center sticky left-0 z-20">K</th>
-                        {showPuts && (["QC","OI","Vol","Θ","V","Γ","Δ","IV%","Sprd%","Mid"] as const).map((h, i) => (
+                        {showPuts && (["QC","OI","Vol","Θ","ρ","V","Γ","Δ","IV%","Sprd%","Mid"] as const).map((h, i) => (
                           <th key={"p"+i} className={[
                             "px-1.5 py-1 font-normal border-r border-zinc-800/60",
-                            i === 9 ? "border-r-0" : "",
+                            i === 10 ? "border-r-0" : "",
                             h === "IV%"   ? "text-[#adc6ff]" : "",
                             h === "Θ"    ? "text-[#ffb4ab]/70" : "",
+                            h === "ρ"    ? "text-[#adc6ff]/60" : "",
                             h === "Sprd%"? "text-yellow-500/70" : "",
                             h === "QC"   ? "text-center" : "",
                           ].join(" ")}>{h}</th>
@@ -811,7 +859,7 @@ export function DataOverview() {
                         const pSprd = spreadPct(row.put_bid, row.put_ask);
                         return (
                           <tr key={row.strike} className={rowCls}>
-                            {/* ── Calls: Mid Sprd% IV% Δ Γ V Θ Vol OI QC ── */}
+                            {/* ── Calls: Mid Sprd% IV% Δ Γ V Θ ρ Vol OI QC ── */}
                             {showCalls && <>
                               <Td>{cMid}</Td>
                               <Td className={cSprd > 5 ? "text-red-400 font-bold" : "text-yellow-500/70"}>
@@ -822,6 +870,7 @@ export function DataOverview() {
                               <Td>{row.call_gamma.toFixed(4)}</Td>
                               <Td>{row.call_vega.toFixed(1)}</Td>
                               <Td className="text-[#ffb4ab]">{row.call_theta.toFixed(1)}</Td>
+                              <Td className="text-[#adc6ff]/70">{row.call_rho != null ? row.call_rho.toFixed(2) : "—"}</Td>
                               <Td className="text-zinc-400">{fmtVol(row.call_volume)}</Td>
                               <Td className="text-zinc-400">{fmtOI(row.call_oi)}</Td>
                               <td className="px-1.5 py-1 text-center border-r border-zinc-800/60">
@@ -834,7 +883,7 @@ export function DataOverview() {
                               {row.strike}
                             </td>
 
-                            {/* ── Puts mirror: QC OI Vol Θ V Γ Δ IV% Sprd% Mid ── */}
+                            {/* ── Puts mirror: QC OI Vol Θ ρ V Γ Δ IV% Sprd% Mid ── */}
                             {showPuts && <>
                               <td className="px-1.5 py-1 text-center border-r border-zinc-800/60">
                                 <QcIcon status={row.put_qc} />
@@ -842,6 +891,7 @@ export function DataOverview() {
                               <Td className="text-zinc-400">{fmtOI(row.put_oi)}</Td>
                               <Td className="text-zinc-400">{fmtVol(row.put_volume)}</Td>
                               <Td className="text-[#ffb4ab]">{row.put_theta.toFixed(1)}</Td>
+                              <Td className="text-[#adc6ff]/70">{row.put_rho != null ? row.put_rho.toFixed(2) : "—"}</Td>
                               <Td>{row.put_vega.toFixed(1)}</Td>
                               <Td>{row.put_gamma.toFixed(4)}</Td>
                               <Td>{row.put_delta.toFixed(2)}</Td>
@@ -903,17 +953,78 @@ export function DataOverview() {
                           <div className="font-mono text-[13px] text-[#adc6ff] mt-0.5">
                             {fp.forward.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                           </div>
+                          {fp.carry_pct != null && (
+                            <div className={`text-[9px] font-mono mt-0.5 ${fp.carry_pct >= 0 ? "text-emerald-400" : "text-[#ffb4ab]"}`}>
+                              {fp.carry_pct >= 0 ? "+" : ""}{fp.carry_pct.toFixed(2)}% carry
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
+
+                    {/* Forward curve F(T) = S·e^((r−q)·T) line chart */}
+                    {(() => {
+                      const spotRef = selectedRow?.spot ?? forwardCurve[0]?.forward;
+                      const chartData = forwardCurve.map(fp => ({
+                        tenor: fp.expiry.replace(/^FUT\s+/i, ""),
+                        forward: fp.forward,
+                      }));
+                      const fMin = Math.min(...forwardCurve.map(f => f.forward));
+                      const fMax = Math.max(...forwardCurve.map(f => f.forward));
+                      const pad  = (fMax - fMin) * 0.25 || spotRef * 0.005;
+                      const yMin = Math.floor((Math.min(fMin, spotRef ?? fMin) - pad) / 10) * 10;
+                      const yMax = Math.ceil((Math.max(fMax, spotRef ?? fMax) + pad) / 10) * 10;
+                      return (
+                        <div className="mb-3">
+                          <div className="text-[9px] font-bold tracking-widest uppercase text-zinc-500 mb-1">
+                            F(T) = S · e<sup>(r−q)T</sup>
+                          </div>
+                          <ResponsiveContainer width="100%" height={100}>
+                            <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                              <XAxis dataKey="tenor" tick={{ fontSize: 9, fill: "#71717a" }} />
+                              <YAxis
+                                domain={[yMin, yMax]}
+                                tick={{ fontSize: 9, fill: "#71717a" }}
+                                tickFormatter={v => v.toLocaleString()}
+                                width={46}
+                              />
+                              <Tooltip
+                                contentStyle={{ background: "#1c1b1d", border: "1px solid #3f3f46", fontSize: 10 }}
+                                formatter={(v: number) => [v.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }), "F(T)"]}
+                                cursor={{ stroke: "#adc6ff40", strokeWidth: 1, strokeDasharray: "4 2" }}
+                              />
+                              {spotRef != null && (
+                                <ReferenceLine
+                                  y={spotRef}
+                                  stroke="#71717a"
+                                  strokeDasharray="4 3"
+                                  strokeWidth={1}
+                                  label={{ value: "SPOT", position: "insideTopRight", fontSize: 8, fill: "#71717a" }}
+                                />
+                              )}
+                              <Line
+                                type="monotone"
+                                dataKey="forward"
+                                stroke="#adc6ff"
+                                strokeWidth={1.5}
+                                dot={{ r: 2.5, fill: "#adc6ff", strokeWidth: 0 }}
+                                activeDot={{ r: 4, fill: "#adc6ff" }}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      );
+                    })()}
+
                     {/* Full forward curve table */}
                     <table className="w-full font-mono text-[11px] border-collapse">
                       <thead>
                         <tr className="border-b border-zinc-800 text-[9px] text-zinc-500 uppercase tracking-widest">
                           <th className="py-1 text-left font-normal">Expiry</th>
                           <th className="py-1 text-right font-normal">Days</th>
-                          <th className="py-1 text-right font-normal">Forward (F)</th>
+                          <th className="py-1 text-right font-normal">F(T)</th>
                           <th className="py-1 text-right font-normal">vs Spot</th>
+                          <th className="py-1 text-right font-normal">Carry %</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -931,17 +1042,23 @@ export function DataOverview() {
                               <td className={`py-1 text-right ${pos ? "text-emerald-400" : "text-[#ffb4ab]"}`}>
                                 {pos ? "+" : ""}{bps}bp
                               </td>
+                              <td className={`py-1 text-right ${pos ? "text-emerald-400" : "text-[#ffb4ab]"}`}>
+                                {fp.carry_pct != null ? `${pos ? "+" : ""}${fp.carry_pct.toFixed(3)}%` : "—"}
+                              </td>
                             </tr>
                           );
                         })}
                       </tbody>
                     </table>
 
-                    {/* ATM vol term structure chart */}
+                    {/* ATM implied vol term structure — separate from forward curve */}
                     {atmTermStructure.length > 0 && (
                       <div className="mt-3 border-t border-zinc-800/60 pt-2">
-                        <div className="text-[9px] font-bold tracking-widest uppercase text-zinc-500 mb-1.5">
-                          ATM Vol Term Structure
+                        <div className="flex items-baseline gap-2 mb-1.5">
+                          <div className="text-[9px] font-bold tracking-widest uppercase text-zinc-500">
+                            ATM Implied Vol Term Structure
+                          </div>
+                          <div className="text-[8px] text-zinc-600">σ_ATM(T) — k=0 slice of vol surface</div>
                         </div>
                         <ResponsiveContainer width="100%" height={90}>
                           <LineChart data={atmTermStructure} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
@@ -949,10 +1066,10 @@ export function DataOverview() {
                             <YAxis tick={{ fontSize: 9, fill: "#71717a" }} tickFormatter={v => v.toFixed(1) + "%"} />
                             <Tooltip
                               contentStyle={{ background: "#1c1b1d", border: "1px solid #3f3f46", fontSize: 10 }}
-                              formatter={(v: number) => [v.toFixed(2) + "%", "ATM Vol"]}
+                              formatter={(v: number) => [v.toFixed(2) + "%", "σ_ATM"]}
                               cursor={{ stroke: "#adc6ff40", strokeWidth: 1, strokeDasharray: "4 2" }}
                             />
-                            <Line type="monotone" dataKey="atm_vol" stroke="#adc6ff" strokeWidth={1.5} dot={{ r: 2, fill: "#adc6ff" }} />
+                            <Line type="monotone" dataKey="atm_vol" stroke="#86efac" strokeWidth={1.5} dot={{ r: 2, fill: "#86efac" }} />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
@@ -1072,24 +1189,24 @@ export function DataOverview() {
 // ---------------------------------------------------------------------------
 
 function GreeksHeatmap({
-  chain, maxDelta, maxGamma, maxVega, maxTheta,
+  chain, maxDelta, maxGamma, maxVega, maxTheta, maxRho,
 }: {
   chain: ChainRow[];
-  maxDelta: number; maxGamma: number; maxVega: number; maxTheta: number;
+  maxDelta: number; maxGamma: number; maxVega: number; maxTheta: number; maxRho: number;
 }) {
-  const cell = (val: number, max: number, color: string) => {
+  const cell = (val: number, max: number, color: string, dp = 3) => {
     const intensity = Math.min(1, Math.abs(val) / max);
     return (
       <td
         className="px-2 py-1 font-mono text-[11px] text-right border-r border-zinc-800/40"
         style={{ background: `${color}${Math.round(intensity * 120).toString(16).padStart(2, "0")}` }}
       >
-        {val.toFixed(3)}
+        {val.toFixed(dp)}
       </td>
     );
   };
   return (
-    <table className="w-full border-collapse font-mono text-[11px]" style={{ minWidth: 640 }}>
+    <table className="w-full border-collapse font-mono text-[11px]" style={{ minWidth: 780 }}>
       <thead className="sticky top-0 bg-[#1c1b1d] z-10">
         <tr className="border-b border-zinc-800 text-[9px] text-zinc-500 uppercase tracking-widest">
           <th className="px-2 py-1 text-right font-normal border-r border-zinc-800">Strike</th>
@@ -1098,10 +1215,12 @@ function GreeksHeatmap({
           <th className="px-2 py-1 text-right font-normal border-r border-zinc-800">Γ</th>
           <th className="px-2 py-1 text-right font-normal border-r border-zinc-800">V (Call)</th>
           <th className="px-2 py-1 text-right font-normal border-r border-zinc-800">Θ (Call)</th>
+          <th className="px-2 py-1 text-right font-normal border-r border-zinc-800">ρ (Call)</th>
           <th className="px-2 py-1 text-right font-normal border-r border-zinc-800">Put IV%</th>
           <th className="px-2 py-1 text-right font-normal border-r border-zinc-800">Δ (Put)</th>
           <th className="px-2 py-1 text-right font-normal border-r border-zinc-800">V (Put)</th>
-          <th className="px-2 py-1 text-right font-normal">Θ (Put)</th>
+          <th className="px-2 py-1 text-right font-normal border-r border-zinc-800">Θ (Put)</th>
+          <th className="px-2 py-1 text-right font-normal">ρ (Put)</th>
         </tr>
       </thead>
       <tbody>
@@ -1113,16 +1232,18 @@ function GreeksHeatmap({
             <td className="px-2 py-1 text-right text-[#adc6ff] border-r border-zinc-800/40">
               {row.call_iv.toFixed(2)}
             </td>
-            {cell(row.call_delta,  maxDelta, "#adc6ff")}
-            {cell(row.call_gamma,  maxGamma, "#4edea3")}
-            {cell(row.call_vega,   maxVega,  "#4edea3")}
-            {cell(row.call_theta,  maxTheta, "#ff8a80")}
+            {cell(row.call_delta,             maxDelta, "#adc6ff")}
+            {cell(row.call_gamma,             maxGamma, "#4edea3")}
+            {cell(row.call_vega,              maxVega,  "#4edea3", 2)}
+            {cell(row.call_theta,             maxTheta, "#ff8a80", 2)}
+            {cell(row.call_rho ?? 0,          maxRho,   "#adc6ff", 2)}
             <td className="px-2 py-1 text-right text-[#adc6ff] border-r border-zinc-800/40">
               {row.put_iv.toFixed(2)}
             </td>
-            {cell(Math.abs(row.put_delta), maxDelta, "#adc6ff")}
-            {cell(row.put_vega,   maxVega,  "#4edea3")}
-            {cell(row.put_theta,  maxTheta, "#ff8a80")}
+            {cell(Math.abs(row.put_delta),    maxDelta, "#adc6ff")}
+            {cell(row.put_vega,               maxVega,  "#4edea3", 2)}
+            {cell(row.put_theta,              maxTheta, "#ff8a80", 2)}
+            {cell(Math.abs(row.put_rho ?? 0), maxRho,   "#adc6ff", 2)}
           </tr>
         ))}
       </tbody>

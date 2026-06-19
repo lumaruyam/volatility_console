@@ -132,6 +132,7 @@ def fetch_options_chain(
             "call_gamma":   round(c.gamma, 6),
             "call_vega":    round(c.vega, 2),
             "call_theta":   round(c.theta, 2),
+            "call_rho":     round(c.rho / 100, 2),   # per 1% rate move (consistent with vega units)
             "call_volume":  call_volume,
             "call_oi":      call_oi,
             "call_qc":      call_qc,
@@ -142,6 +143,7 @@ def fetch_options_chain(
             "put_gamma":    round(p.gamma, 6),
             "put_vega":     round(p.vega, 2),
             "put_theta":    round(p.theta, 2),
+            "put_rho":      round(p.rho / 100, 2),   # negative for puts
             "put_volume":   put_volume,
             "put_oi":       put_oi,
             "put_qc":       put_qc,
